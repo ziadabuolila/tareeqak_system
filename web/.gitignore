@@ -1,0 +1,7 @@
+.env.local
+api/database.sqlite
+api/database.sqlite-shm
+api/database.sqlite-wal
+.next/
+.vercel
+.env*
