@@ -112,6 +112,12 @@ export function isDuplicateError(error: unknown): boolean {
 }
 
 export async function initializeDatabase(): Promise<void> {
+  if (process.env.NODE_ENV === "production" && !connectionString) {
+    throw Object.assign(new Error("DATABASE_URL is required in production."), {
+      code: "CONFIG_DATABASE_URL_MISSING",
+    });
+  }
+
   if (globalDatabase.tareeqakPgInitialization) return globalDatabase.tareeqakPgInitialization;
 
   globalDatabase.tareeqakPgInitialization = (async () => {
