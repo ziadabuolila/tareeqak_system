@@ -94,13 +94,8 @@ export async function execute(sql: string, values: SqlValue[] = []): Promise<Res
   const result = await database.query(text, normalizedValues);
 
   let insertId: number | string | null | undefined;
-  if (result.command === "INSERT") {
-    const tableMatch = text.match(/INSERT\s+INTO\s+["`]?([a-zA-Z0-9_]+)["`]?/i);
-    if (tableMatch && tableMatch[1]) {
-      const tableName = tableMatch[1];
-      const sequenceResult = await database.query(`SELECT currval(pg_get_serial_sequence($1, 'id')) AS id`, [tableName]);
-        insertId = (sequenceResult.rows?.[0]?.id as number | string | null | undefined) ?? null;
-    }
+  if (result.command === "INSERT" && result.rows?.[0] && typeof result.rows[0] === "object" && "id" in result.rows[0]) {
+    insertId = (result.rows[0].id as number | string | null | undefined) ?? null;
   }
 
   return {

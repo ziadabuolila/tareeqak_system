@@ -50,7 +50,7 @@ export async function POST(request: Request) {
   if (!name || !/^\S+@\S+\.\S+$/.test(email) || !phone || password.length < 8) return NextResponse.json({ message: "أدخل اسمًا وبريدًا صحيحًا وهاتفًا وكلمة مرور من 8 أحرف على الأقل." }, { status: 422 });
   try {
     const hash = await hashPassword(password);
-    const result = await execute("INSERT INTO users(name,email,phone,password,role,employee_number,job_title,department,employment_type,hire_date,birth_date,gender,national_id,address,emergency_contact_name,emergency_contact_phone,salary,notes) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", [name,email,phone,hash,role,employeeNumber,jobTitle,department,employmentType,hireDate,birthDate,gender,nationalId,address,emergencyName,emergencyPhone,salary,notes]);
+    const result = await execute("INSERT INTO users(name,email,phone,password,role,employee_number,job_title,department,employment_type,hire_date,birth_date,gender,national_id,address,emergency_contact_name,emergency_contact_phone,salary,notes) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) RETURNING id", [name,email,phone,hash,role,employeeNumber,jobTitle,department,employmentType,hireDate,birthDate,gender,nationalId,address,emergencyName,emergencyPhone,salary,notes]);
     const employee = (await rows<RowDataPacket>("SELECT id,name,email,phone,role,status,employee_number,job_title,department,employment_type,hire_date,birth_date,gender,national_id,address,emergency_contact_name,emergency_contact_phone,salary,notes,created_at FROM users WHERE id=?", [result.insertId]))[0];
     return NextResponse.json({ status: true, data: { employee } }, { status: 201 });
   } catch (error) {
