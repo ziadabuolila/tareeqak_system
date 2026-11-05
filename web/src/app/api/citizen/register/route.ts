@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createToken, hashPassword, publicUser, type AuthenticatedUser } from "@/lib/auth";
 import { database, initializeDatabase, row } from "@/lib/database";
-import type { RowDataPacket } from "mysql2/promise";
+import type { RowDataPacket } from "@/lib/database";
 
 export const runtime = "nodejs";
 
@@ -52,14 +52,15 @@ export async function POST(request: Request) {
     let userId = 0;
     try {
       await connection.beginTransaction();
-      const [result] = await connection.execute<import("mysql2/promise").ResultSetHeader>(`
+      const result = await connection.execute(`
         INSERT INTO users (name, phone, email, password, created_at, updated_at)
-        VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+        VALUES ($1, $2, $3, $4, NOW(), NOW())
+        RETURNING id
       `, [name, phone, email, passwordHash]);
-      userId = result.insertId;
+      userId = Number((result.rows?.[0]?.id as number | string | null | undefined) ?? 0);
       await connection.execute(`
         INSERT INTO citizens (user_id, name, governorate, city, phone, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+        VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
       `, [userId, name, governorate, city, phone]);
       await connection.commit();
     } catch (error) {

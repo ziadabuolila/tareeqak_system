@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAdminForRequest } from "@/lib/auth";
 import { execute, initializeDatabase, row } from "@/lib/database";
-import type { RowDataPacket } from "mysql2/promise";
+import type { RowDataPacket } from "@/lib/database";
 
 export const runtime = "nodejs";
 const defaults = { siteName: "طريقك", region: "", email: "", notifications: true, weeklyReport: false };
@@ -21,7 +21,9 @@ export async function PUT(request: Request) {
   try { body = await request.json(); } catch { return NextResponse.json({ message: "بيانات الإعدادات غير صالحة." }, { status: 422 }); }
   const settings = { siteName: String(body.siteName ?? "").trim(), region: String(body.region ?? "").trim(), email: String(body.email ?? "").trim(), notifications: Boolean(body.notifications), weeklyReport: Boolean(body.weeklyReport) };
   if (!settings.siteName || !settings.email || !/^\S+@\S+\.\S+$/.test(settings.email)) return NextResponse.json({ message: "اسم المنصة والبريد الصحيح مطلوبان." }, { status: 422 });
-  await execute(`INSERT INTO system_settings(setting_key,value,updated_at) VALUES('general',?,CURRENT_TIMESTAMP)
-    ON DUPLICATE KEY UPDATE value=VALUES(value),updated_at=CURRENT_TIMESTAMP`, [JSON.stringify(settings)]);
+  await execute(`INSERT INTO system_settings(setting_key, value, updated_at)
+    VALUES ('general', $1, NOW())
+    ON CONFLICT (setting_key)
+    DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()`, [JSON.stringify(settings)]);
   return NextResponse.json({ status: true, data: { settings } });
 }

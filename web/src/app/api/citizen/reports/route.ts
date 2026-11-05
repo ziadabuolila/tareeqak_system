@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getRequestToken, getUserForToken } from "@/lib/auth";
 import { database, initializeDatabase, row, rows } from "@/lib/database";
-import type { RowDataPacket } from "mysql2/promise";
+import type { RowDataPacket } from "@/lib/database";
 export const runtime = "nodejs";
 
 export async function GET(request: Request) {
@@ -38,10 +38,11 @@ export async function POST(request: Request) {
   let reportId = 0;
   try {
     await connection.beginTransaction();
-    const [insertResult] = await connection.execute<import("mysql2/promise").ResultSetHeader>(`INSERT INTO reports(reference,user_id,title,category,description,governorate,city,location,image_url,image_data,image_type)
-      VALUES(?,?,?,?,?,?,?,?,?,?,?)`, [reference,user.id,category,category,description,governorate,city,location,null,imageData,imageData ? "image/jpeg" : null]);
-    reportId = insertResult.insertId;
-    await connection.execute("INSERT INTO notifications(title,body,kind) VALUES(?,?,?)", ["بلاغ جديد يحتاج للمراجعة",`تم تسجيل البلاغ ${reference} في ${city || location}.`,"warning"]);
+    const insertResult = await connection.execute(`INSERT INTO reports(reference,user_id,title,category,description,governorate,city,location,image_url,image_data,image_type)
+      VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+      RETURNING id`, [reference, user.id, category, category, description, governorate, city, location, null, imageData, imageData ? "image/jpeg" : null]);
+    reportId = Number((insertResult.rows?.[0]?.id as number | string | null | undefined) ?? 0);
+    await connection.execute("INSERT INTO notifications(title,body,kind) VALUES($1,$2,$3)", ["بلاغ جديد يحتاج للمراجعة", `تم تسجيل البلاغ ${reference} في ${city || location}.`, "warning"]);
     await connection.commit();
   } catch (error) {
     await connection.rollback();

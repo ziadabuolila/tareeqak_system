@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getRequestToken, getUserForToken } from "@/lib/auth";
 import { initializeDatabase, row } from "@/lib/database";
-import type { RowDataPacket } from "mysql2/promise";
+import type { RowDataPacket } from "@/lib/database";
 
 export const runtime = "nodejs";
 

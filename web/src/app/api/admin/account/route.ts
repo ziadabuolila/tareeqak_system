@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAdminForRequest, publicUser } from "@/lib/auth";
 import { execute, initializeDatabase, row } from "@/lib/database";
-import type { RowDataPacket } from "mysql2/promise";
+import type { RowDataPacket } from "@/lib/database";
 export const runtime = "nodejs";
 export async function GET(request: Request) {
   await initializeDatabase();

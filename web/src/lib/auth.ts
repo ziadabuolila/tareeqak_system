@@ -1,8 +1,7 @@
 import { createHash, randomBytes } from "node:crypto";
 import bcrypt from "bcryptjs";
 import { cookies } from "next/headers";
-import { execute, row } from "@/lib/database";
-import type { RowDataPacket } from "mysql2/promise";
+import { execute, row, type RowDataPacket } from "@/lib/database";
 
 export type PublicUser = {
   id: number;
@@ -29,12 +28,14 @@ export function publicUser(user: AuthenticatedUser | undefined): PublicUser | nu
 
 export async function createToken(userId: number, name = "mobile-app"): Promise<string> {
   const secret = randomBytes(32).toString("hex");
+  const expiresAt = name === "admin-web" ? "NOW() + INTERVAL '1 hour'" : "NULL";
   const result = await execute(`
     INSERT INTO personal_access_tokens (tokenable_type, tokenable_id, name, token, abilities, expires_at)
-    VALUES (?, ?, ?, ?, ?, ${name === "admin-web" ? "DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 1 HOUR)" : "NULL"})
+    VALUES ($1, $2, $3, $4, $5, ${expiresAt})
+    RETURNING id
   `, ["App\\Models\\User", userId, name, createHash("sha256").update(secret).digest("hex"), '["*"]']);
 
-  return `${result.insertId}|${secret}`;
+  return `${result.insertId ?? userId}|${secret}`;
 }
 
 export async function getUserForToken(token: string | null | undefined): Promise<AuthenticatedUser | null> {
@@ -59,8 +60,11 @@ export async function getUserForToken(token: string | null | undefined): Promise
   `, [tokenId, tokenHash, "App\\Models\\User"]);
 
   if (!record) return null;
-  await execute(`UPDATE personal_access_tokens SET last_used_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP,
-    expires_at = IF(name = 'admin-web', DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 1 HOUR), expires_at) WHERE id = ?`, [tokenId]);
+  await execute(`UPDATE personal_access_tokens
+    SET last_used_at = NOW(),
+        updated_at = NOW(),
+        expires_at = CASE WHEN name = 'admin-web' THEN NOW() + INTERVAL '1 hour' ELSE expires_at END
+    WHERE id = $1`, [tokenId]);
   return record;
 }
 

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { hashPassword, getAdminForRequest } from "@/lib/auth";
 import { execute, initializeDatabase, rows } from "@/lib/database";
-import type { RowDataPacket } from "mysql2/promise";
+import type { RowDataPacket } from "@/lib/database";
 
 export const runtime = "nodejs";
 
