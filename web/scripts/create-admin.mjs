@@ -1,7 +1,8 @@
-import { loadEnvConfig } from "@next/env";
+import nextEnv from "@next/env";
 import { Client } from "pg";
 import bcrypt from "bcryptjs";
 
+const { loadEnvConfig } = nextEnv;
 loadEnvConfig(process.cwd());
 const connectionString = process.env.DATABASE_URL;
 const name = process.env.TAREEQAK_ADMIN_NAME?.trim();

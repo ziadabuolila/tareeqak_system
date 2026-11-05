@@ -45,7 +45,7 @@ const normalizeSql = (sql: string, values: SqlValue[] = []) => {
   return { text: finalSql, values };
 };
 
-const connectionString = process.env.DATABASE_URL ?? undefined;
+const connectionString = process.env.DATABASE_URL?.trim() || undefined;
 
 export const database = (globalDatabase.tareeqakPgPool ?? new Pool({
   connectionString,
@@ -55,6 +55,10 @@ export const database = (globalDatabase.tareeqakPgPool ?? new Pool({
   password: connectionString ? undefined : (process.env.DB_PASSWORD ?? ""),
   database: connectionString ? undefined : (process.env.DB_NAME ?? "tareeqak_system"),
   ssl: connectionString ? { rejectUnauthorized: false } : undefined,
+  max: 1,
+  connectionTimeoutMillis: 10_000,
+  idleTimeoutMillis: 10_000,
+  allowExitOnIdle: true,
 })) as DatabaseWithConnection;
 
 globalDatabase.tareeqakPgPool = database;
@@ -116,6 +120,21 @@ export async function initializeDatabase(): Promise<void> {
     throw Object.assign(new Error("DATABASE_URL is required in production."), {
       code: "CONFIG_DATABASE_URL_MISSING",
     });
+  }
+  if (connectionString) {
+    let parsedUrl: URL;
+    try {
+      parsedUrl = new URL(connectionString);
+    } catch {
+      throw Object.assign(new Error("DATABASE_URL must be a valid PostgreSQL connection URL."), {
+        code: "CONFIG_DATABASE_URL_INVALID",
+      });
+    }
+    if (!["postgres:", "postgresql:"].includes(parsedUrl.protocol) || !parsedUrl.hostname) {
+      throw Object.assign(new Error("DATABASE_URL must point to a PostgreSQL host."), {
+        code: "CONFIG_DATABASE_URL_INVALID",
+      });
+    }
   }
 
   if (globalDatabase.tareeqakPgInitialization) return globalDatabase.tareeqakPgInitialization;
@@ -236,7 +255,7 @@ export async function initializeDatabase(): Promise<void> {
     }
 
     const triggerSql = `
-      CREATE OR REPLACE FUNCTION set_updated_at()
+      CREATE OR REPLACE FUNCTION public.set_updated_at()
       RETURNS TRIGGER AS $$
       BEGIN
         NEW.updated_at = NOW();
@@ -248,8 +267,22 @@ export async function initializeDatabase(): Promise<void> {
 
     const tableNames = ["users", "citizens", "personal_access_tokens", "reports", "system_settings"];
     for (const tableName of tableNames) {
-      await database.query(`DROP TRIGGER IF EXISTS ${tableName}_updated_at ON ${tableName};`);
-      await database.query(`CREATE TRIGGER ${tableName}_updated_at BEFORE UPDATE ON ${tableName} FOR EACH ROW EXECUTE FUNCTION set_updated_at();`);
+      await database.query(`
+        DO $trigger$
+        BEGIN
+          IF NOT EXISTS (
+            SELECT 1 FROM pg_catalog.pg_trigger
+            WHERE tgrelid = 'public.${tableName}'::regclass
+              AND tgname = '${tableName}_updated_at'
+              AND NOT tgisinternal
+          ) THEN
+              EXECUTE 'CREATE TRIGGER ${tableName}_updated_at
+                BEFORE UPDATE ON public.${tableName}
+                FOR EACH ROW EXECUTE FUNCTION public.set_updated_at()';
+          END IF;
+        END;
+        $trigger$;
+      `);
     }
 
     await database.query(`CREATE INDEX IF NOT EXISTS users_role_created_idx ON users (role, created_at)`);
