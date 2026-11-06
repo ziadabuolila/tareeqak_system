@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createToken, hashPassword, publicUser, type AuthenticatedUser } from "@/lib/auth";
+import { hashPassword, publicUser, type AuthenticatedUser } from "@/lib/auth";
 import { database, assertDatabaseConfigured, isDuplicateError, row } from "@/lib/database";
 import type { RowDataPacket } from "@/lib/database";
 
@@ -41,27 +41,18 @@ export async function POST(request: Request) {
   if (password !== confirmation) errors.password = ["The password field confirmation does not match."];
   if (Object.keys(errors).length) return failure("The given data was invalid.", 422, errors);
 
-  const email = `${phone}@tareeqak.com.eg`;
-  if (await row<RowDataPacket>("SELECT 1 FROM users WHERE email = ? LIMIT 1", [email])) {
-    return failure("Email already exists.", 422);
-  }
-
   try {
     const passwordHash = await hashPassword(password);
     const connection = await database.getConnection();
-    let userId = 0;
+    let citizenId = 0;
     try {
       await connection.beginTransaction();
       const result = await connection.execute(`
-        INSERT INTO users (name, phone, email, password, created_at, updated_at)
-        VALUES ($1, $2, $3, $4, NOW(), NOW())
+        INSERT INTO citizens (name,email,phone,password,governorate,city,status,created_at,updated_at)
+        VALUES ($1,$2,$3,$4,$5,$6,'active',NOW(),NOW())
         RETURNING id
-      `, [name, phone, email, passwordHash]);
-      userId = Number((result.rows?.[0]?.id as number | string | null | undefined) ?? 0);
-      await connection.execute(`
-        INSERT INTO citizens (user_id, name, governorate, city, phone, created_at, updated_at)
-        VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
-      `, [userId, name, governorate, city, phone]);
+      `, [name, null, phone, passwordHash, governorate, city]);
+      citizenId = Number((result.rows?.[0]?.id as number | string | null | undefined) ?? 0);
       await connection.commit();
     } catch (error) {
       await connection.rollback();
@@ -69,13 +60,12 @@ export async function POST(request: Request) {
     } finally {
       connection.release();
     }
-    const user = await row<AuthenticatedUser & RowDataPacket>("SELECT * FROM users WHERE id = ?", [userId]);
-    const token = await createToken(userId);
+    const citizen = await row<AuthenticatedUser & RowDataPacket>("SELECT id,name,email,phone,password,status,created_at,updated_at,'citizen' AS role FROM citizens WHERE id = ?", [citizenId]);
 
     return NextResponse.json({
       status: true,
       message: "Registration successful",
-      data: { user: publicUser(user), token, token_type: "Bearer" },
+      data: { user: publicUser(citizen) },
     }, { status: 201 });
   } catch (error) {
     if (isDuplicateError(error)) {

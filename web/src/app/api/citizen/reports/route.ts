@@ -9,7 +9,7 @@ export async function GET(request: Request) {
   const user = await getUserForToken(await getRequestToken(request));
   if (!user || (user as typeof user & { role?: string }).role !== "citizen") return NextResponse.json({ message: "Unauthenticated." }, { status: 401 });
   const reports = await rows<RowDataPacket>(`SELECT id,reference,title,category,description,status,governorate,city,location,image_type,created_at,updated_at
-    FROM reports WHERE user_id=? ORDER BY created_at DESC,id DESC`, [user.id]);
+    FROM reports WHERE citizen_id=? ORDER BY created_at DESC,id DESC`, [user.id]);
   return NextResponse.json({ status: true, data: { reports } });
 }
 
@@ -26,7 +26,7 @@ export async function POST(request: Request) {
   const longitude = Number(body.longitude);
   const hasCoordinates = body.latitude !== undefined && body.latitude !== null && body.latitude !== "" && body.longitude !== undefined && body.longitude !== null && body.longitude !== "" && Number.isFinite(latitude) && Number.isFinite(longitude) && Math.abs(latitude) <= 90 && Math.abs(longitude) <= 180;
   const location = hasCoordinates ? `${latitude},${longitude}` : suppliedLocation;
-  const citizen = await row<{ governorate: string; city: string } & RowDataPacket>("SELECT governorate,city FROM citizens WHERE user_id=? LIMIT 1", [user.id]);
+  const citizen = await row<{ governorate: string; city: string } & RowDataPacket>("SELECT governorate,city FROM citizens WHERE id=? LIMIT 1", [user.id]);
   const governorate = typeof body.governorate === "string" ? body.governorate.trim() : citizen?.governorate ?? "";
   const city = typeof body.city === "string" ? body.city.trim() : citizen?.city ?? "";
   if (!category || !description || !location) return NextResponse.json({ message: "التصنيف والوصف والموقع مطلوبة." }, { status: 422 });
@@ -42,7 +42,7 @@ export async function POST(request: Request) {
   let reportId = 0;
   try {
     await connection.beginTransaction();
-    const insertResult = await connection.execute(`INSERT INTO reports(reference,user_id,title,category,description,governorate,city,location,image_url,image_data,image_type)
+    const insertResult = await connection.execute(`INSERT INTO reports(reference,citizen_id,title,category,description,governorate,city,location,image_url,image_data,image_type)
       VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
       RETURNING id`, [reference, user.id, category, category, description, governorate, city, location, null, imageData, imageData ? "image/jpeg" : null]);
     reportId = Number((insertResult.rows?.[0]?.id as number | string | null | undefined) ?? 0);
@@ -61,6 +61,6 @@ export async function POST(request: Request) {
   } finally {
     connection.release();
   }
-  const report = await row<RowDataPacket>("SELECT id,reference,user_id,title,category,description,status,governorate,city,location,image_type,created_at,updated_at FROM reports WHERE id=?", [reportId]);
+  const report = await row<RowDataPacket>("SELECT id,reference,citizen_id,title,category,description,status,governorate,city,location,image_type,created_at,updated_at FROM reports WHERE id=?", [reportId]);
   return NextResponse.json({ status: true, message: "Report created successfully", data: { report } }, { status: 201 });
 }

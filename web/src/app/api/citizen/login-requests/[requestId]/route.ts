@@ -19,10 +19,10 @@ export async function PATCH(request: Request, context: Params) {
   const connection = await database.getConnection();
   try {
     await connection.beginTransaction();
-    const found = await connection.execute<{ user_id: number; status: string; expires_at: string } & RowDataPacket>(
-      "SELECT user_id,status,expires_at FROM citizen_login_requests WHERE request_id=? FOR UPDATE", [(await context.params).requestId]);
+    const found = await connection.execute<{ citizen_id: number; status: string; expires_at: string } & RowDataPacket>(
+      "SELECT citizen_id,status,expires_at FROM citizen_login_requests WHERE request_id=? FOR UPDATE", [(await context.params).requestId]);
     const loginRequest = found.rows[0];
-    if (!loginRequest || Number(loginRequest.user_id) !== actor.id) {
+    if (!loginRequest || Number(loginRequest.citizen_id) !== actor.id) {
       await connection.rollback();
       return NextResponse.json({ message: "طلب تسجيل الدخول غير موجود." }, { status: 404 });
     }
@@ -32,7 +32,7 @@ export async function PATCH(request: Request, context: Params) {
       return NextResponse.json({ message: "انتهت صلاحية طلب تسجيل الدخول." }, { status: 410 });
     }
     if (action === "approved") {
-      await connection.execute("DELETE FROM personal_access_tokens WHERE tokenable_id=? AND name <> 'admin-web'", [actor.id]);
+      await connection.execute("DELETE FROM personal_access_tokens WHERE tokenable_id=? AND tokenable_type='App\\Models\\Citizen' AND name <> 'admin-web'", [actor.id]);
     }
     await connection.execute("UPDATE citizen_login_requests SET status=? WHERE request_id=?", [action, (await context.params).requestId]);
     await connection.commit();
@@ -49,8 +49,8 @@ export async function GET(_request: Request, context: Params) {
   const connection = await database.getConnection();
   try {
     await connection.beginTransaction();
-    const found = await connection.execute<{ user_id: number; status: string; expires_at: string } & RowDataPacket>(
-      "SELECT user_id,status,expires_at FROM citizen_login_requests WHERE request_id=? FOR UPDATE", [requestId]);
+    const found = await connection.execute<{ citizen_id: number; status: string; expires_at: string } & RowDataPacket>(
+      "SELECT citizen_id,status,expires_at FROM citizen_login_requests WHERE request_id=? FOR UPDATE", [requestId]);
     const loginRequest = found.rows[0];
     if (!loginRequest) { await connection.rollback(); return NextResponse.json({ message: "طلب تسجيل الدخول غير موجود." }, { status: 404 }); }
     if (loginRequest.status === "pending" && new Date(loginRequest.expires_at).valueOf() <= Date.now()) {
@@ -65,7 +65,7 @@ export async function GET(_request: Request, context: Params) {
     }
 
     const account = await connection.execute<{ id: number; name: string; phone: string; email: string | null; role: string; status: string; created_at: string; updated_at: string } & RowDataPacket>(
-      "SELECT id,name,phone,email,role,status,created_at,updated_at FROM users WHERE id=? AND role='citizen' AND status='active'", [loginRequest.user_id]);
+      "SELECT id,name,phone,email,'citizen' AS role,status,created_at,updated_at FROM citizens WHERE id=? AND status='active'", [loginRequest.citizen_id]);
     const user = account.rows[0];
     if (!user) {
       await connection.execute("UPDATE citizen_login_requests SET status='expired' WHERE request_id=?", [requestId]);
@@ -75,7 +75,7 @@ export async function GET(_request: Request, context: Params) {
     const secret = randomBytes(32).toString("hex");
     const tokenHash = createHash("sha256").update(secret).digest("hex");
     const created = await connection.execute<{ id: number } & RowDataPacket>(`INSERT INTO personal_access_tokens(tokenable_type,tokenable_id,name,token,abilities,created_at,updated_at)
-      VALUES('App\\Models\\User',?,'mobile-app',?,'["*"]',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP) RETURNING id`, [user.id, tokenHash]);
+      VALUES('App\\Models\\Citizen',?,'mobile-app',?,'["*"]',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP) RETURNING id`, [user.id, tokenHash]);
     const token = `${created.rows[0].id}|${secret}`;
     await connection.execute("UPDATE citizen_login_requests SET status='completed' WHERE request_id=?", [requestId]);
     await connection.commit();

@@ -8,10 +8,10 @@ export const runtime = "nodejs";
 export async function GET(request: Request) {
   await assertDatabaseConfigured();
   if (!(await getAdminForRequest(request))) return NextResponse.json({ message: "Unauthenticated." }, { status: 401 });
-  const citizens = await rows<RowDataPacket>(`SELECT users.id,users.name,users.email,users.phone,users.status,citizens.city,citizens.governorate,citizens.age,citizens.address,citizens.national_id,citizens.gender,citizens.created_at AS citizen_created_at,
+  const citizens = await rows<RowDataPacket>(`SELECT citizens.id,citizens.name,citizens.email,citizens.phone,citizens.status,citizens.city,citizens.governorate,citizens.age,citizens.address,citizens.national_id,citizens.gender,citizens.created_at AS citizen_created_at,
     (NULLIF(BTRIM(COALESCE(citizens.gender,'')),'') IS NOT NULL AND NULLIF(BTRIM(COALESCE(citizens.age,'')),'') IS NOT NULL AND NULLIF(BTRIM(COALESCE(citizens.address,'')),'') IS NOT NULL AND NULLIF(BTRIM(COALESCE(citizens.governorate,'')),'') IS NOT NULL AND NULLIF(BTRIM(COALESCE(citizens.city,'')),'') IS NOT NULL AND NULLIF(BTRIM(COALESCE(citizens.national_id,'')),'') IS NOT NULL) AS profile_complete,
-    (SELECT COUNT(*) FROM reports WHERE reports.user_id=users.id) AS reports
-    FROM users JOIN citizens ON citizens.user_id=users.id WHERE users.role='citizen' ORDER BY users.created_at DESC`);
+    (SELECT COUNT(*) FROM reports WHERE reports.citizen_id=citizens.id) AS reports
+    FROM citizens ORDER BY citizens.created_at DESC`);
   let employees: RowDataPacket[];
   try {
     employees = await rows<RowDataPacket>("SELECT id,name,email,phone,role,status,employee_number,job_title,department,employment_type,hire_date,birth_date,gender,national_id,address,emergency_contact_name,emergency_contact_phone,salary,notes,created_at FROM users WHERE role IN ('admin','manager','employee') ORDER BY created_at DESC");

@@ -10,8 +10,8 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
   if (!(await getStaffForRequest(request))) return NextResponse.json({ message: "Unauthenticated." }, { status: 401 });
   const id = Number((await context.params).id);
   if (!Number.isSafeInteger(id)) return NextResponse.json({ message: "معرّف البلاغ غير صالح." }, { status: 422 });
-  const report = await row<Record<string, unknown> & RowDataPacket>(`SELECT reports.*,users.name AS user_name,users.phone AS user_phone FROM reports
-    LEFT JOIN users ON users.id=reports.user_id WHERE reports.id=?`, [id]);
+  const report = await row<Record<string, unknown> & RowDataPacket>(`SELECT reports.*,citizens.name AS user_name,citizens.phone AS user_phone FROM reports
+    LEFT JOIN citizens ON citizens.id=reports.citizen_id WHERE reports.id=?`, [id]);
   if (!report) return NextResponse.json({ message: "البلاغ غير موجود." }, { status: 404 });
   const image = report.image_data as Uint8Array | null;
   delete report.image_data;

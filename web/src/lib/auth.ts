@@ -27,15 +27,27 @@ export function publicUser(user: AuthenticatedUser | undefined): PublicUser | nu
 }
 
 export async function createToken(userId: number, name = "mobile-app"): Promise<string> {
+  return createTokenFor("App\\Models\\User", userId, name);
+}
+
+export async function createCitizenToken(citizenId: number, name = "mobile-app"): Promise<string> {
+  return createTokenFor("App\\Models\\Citizen", citizenId, name);
+}
+
+async function createTokenFor(tokenableType: string, tokenableId: number, name: string): Promise<string> {
   const secret = randomBytes(32).toString("hex");
   const expiresAt = name === "admin-web" ? "NOW() + INTERVAL '1 hour'" : "NULL";
   const result = await execute(`
     INSERT INTO personal_access_tokens (tokenable_type, tokenable_id, name, token, abilities, expires_at)
     VALUES ($1, $2, $3, $4, $5, ${expiresAt})
     RETURNING id
-  `, ["App\\Models\\User", userId, name, createHash("sha256").update(secret).digest("hex"), '["*"]']);
+  `, [tokenableType, tokenableId, name, createHash("sha256").update(secret).digest("hex"), '["*"]']);
 
-  return `${result.insertId ?? userId}|${secret}`;
+  const tokenId = Number(result.insertId);
+  if (!Number.isSafeInteger(tokenId) || tokenId <= 0) {
+    throw new Error("Failed to create an authentication token.");
+  }
+  return `${tokenId}|${secret}`;
 }
 
 export async function getUserForToken(token: string | null | undefined): Promise<AuthenticatedUser | null> {
@@ -49,15 +61,23 @@ export async function getUserForToken(token: string | null | undefined): Promise
 
   const tokenHash = createHash("sha256").update(secret).digest("hex");
   const record = await row<AuthenticatedUser & RowDataPacket>(`
-    SELECT users.*, personal_access_tokens.id AS token_id
+    SELECT account.*, personal_access_tokens.id AS token_id
     FROM personal_access_tokens
-    JOIN users ON users.id = personal_access_tokens.tokenable_id
+    JOIN (
+      SELECT users.id,users.name,users.phone,users.email,users.email_verified_at,users.password,users.remember_token,
+        users.created_at,users.updated_at,users.role,users.status,'App\\Models\\User' AS tokenable_type
+      FROM users
+      UNION ALL
+      SELECT citizens.id,citizens.name,citizens.phone,citizens.email,NULL AS email_verified_at,citizens.password,NULL AS remember_token,
+        citizens.created_at,citizens.updated_at,'citizen' AS role,citizens.status,'App\\Models\\Citizen' AS tokenable_type
+      FROM citizens
+    ) AS account ON account.id=personal_access_tokens.tokenable_id
     WHERE personal_access_tokens.id = ?
       AND personal_access_tokens.token = ?
-      AND personal_access_tokens.tokenable_type = ?
-      AND users.status = 'active'
+      AND personal_access_tokens.tokenable_type = account.tokenable_type
+      AND account.status = 'active'
       AND (personal_access_tokens.expires_at IS NULL OR personal_access_tokens.expires_at > CURRENT_TIMESTAMP)
-  `, [tokenId, tokenHash, "App\\Models\\User"]);
+  `, [tokenId, tokenHash]);
 
   if (!record) return null;
   await execute(`UPDATE personal_access_tokens

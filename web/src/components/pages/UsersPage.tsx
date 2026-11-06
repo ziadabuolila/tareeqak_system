@@ -33,14 +33,16 @@ export default function UsersPage() {
         setPendingDelete(user);
         return;
       }
-      await adminRequest(`/admin/users/${user.id}`, { method: "PATCH", body: JSON.stringify({ status: user.status === "active" ? "blocked" : "active" }) });
+      const path = tab === "citizens" ? `/admin/users/${user.id}?type=citizen` : `/admin/users/${user.id}`;
+      await adminRequest(path, { method: "PATCH", body: JSON.stringify({ status: user.status === "active" ? "blocked" : "active" }) });
       await load();
     } catch (cause) { setError(cause instanceof Error ? cause.message : "تعذر تحديث الحساب."); }
   }
   async function confirmDelete() {
     if (!pendingDelete) return;
     try {
-      await adminRequest(`/admin/users/${pendingDelete.id}`, { method: "DELETE" });
+      const path = tab === "citizens" ? `/admin/users/${pendingDelete.id}?type=citizen` : `/admin/users/${pendingDelete.id}`;
+      await adminRequest(path, { method: "DELETE" });
       setPendingDelete(null);
       await load();
     } catch (cause) {
@@ -81,7 +83,7 @@ export default function UsersPage() {
       </div>
       <div className="user-summary"><span><UserRoundCheck size={17} /> نشط: <b>{loading ? <InlineNumberLoader label="جارٍ تحميل عدد الحسابات النشطة" /> : current.filter((u) => u.status === "active").length}</b></span><span><UserRoundX size={17} /> موقوف: <b>{loading ? <InlineNumberLoader label="جارٍ تحميل عدد الحسابات الموقوفة" /> : current.filter((u) => u.status === "blocked").length}</b></span></div>
       <div className="table-wrap"><table><thead><tr><th>{tab === "employees" ? "الموظف" : "المواطن"}</th>{tab === "employees" && <th>الدور</th>}<th>الهاتف</th>{tab === "citizens" && <><th>المنطقة</th><th>اكتمال الملف</th><th>البلاغات</th></>}{tab === "employees" && <th>الحالة</th>}{tab === "citizens" && <th>الحالة</th>}<th>إجراءات</th></tr></thead>
-        <tbody>{filtered.map((u) => <tr key={u.id}><td><div className="user-cell"><span className="avatar">{u.name.slice(0,1)}</span><span><b>{u.name}</b><small>{u.email || "—"}</small></span></div></td>{tab === "employees" && <td>{roleNames[u.role ?? "employee"]}</td>}<td>{u.phone}</td>{tab === "citizens" && <><td>{[u.city,u.governorate].filter(Boolean).join("، ") || "—"}</td><td><span className={`status-pill ${u.profile_complete ? "resolved" : "pending"}`}><i />{u.profile_complete ? "مكتمل" : "ناقص"}</span></td><td>{u.reports ?? 0}</td></>}<td><span className={`status-pill ${u.status === "active" ? "resolved" : "rejected"}`}><i />{u.status === "active" ? "نشط" : "موقوف"}</span></td><td><div className="inline-actions">{tab === "employees" ? <button className="icon-button" title="تعديل بيانات الموظف" aria-label={`تعديل ${u.name}`} onClick={() => startEdit(u)}><Pencil size={15} /></button> : <button className="icon-button" title="عرض ملف المواطن" aria-label={`عرض ملف ${u.name}`} onClick={() => setViewCitizen(u)}><Eye size={15} /></button>}<button className="btn btn-small btn-light" onClick={() => void update(u,"status")}>{u.status === "active" ? "إيقاف" : "تفعيل"}</button><button className="icon-button danger-icon" title="حذف الحساب" onClick={() => void update(u,"delete")}><Trash2 size={15} /></button></div></td></tr>)}</tbody></table>
+        <tbody>{filtered.map((u) => <tr key={u.id}><td><div className="user-cell"><span className="avatar">{u.name.slice(0,1)}</span><span><b>{u.name}</b><small>{u.email || "—"}</small></span></div></td>{tab === "employees" && <td>{roleNames[u.role ?? "employee"]}</td>}<td>{u.phone}</td>{tab === "citizens" && <><td>{[u.city,u.governorate].filter(Boolean).join("، ") || "—"}</td><td><span className={`status-pill ${u.profile_complete ? "resolved" : "pending"}`}><i />{u.profile_complete ? "مكتمل" : "ناقص"}</span></td><td>{u.reports ?? 0}</td></>}<td><span className={`status-pill ${u.status === "active" ? "resolved" : "rejected"}`}><i />{u.status === "active" ? "نشط" : "موقوف"}</span></td><td><div className="inline-actions">{tab === "employees" ? <button className="icon-button" title="تعديل بيانات الموظف" aria-label={`تعديل ${u.name}`} onClick={() => startEdit(u)}><Pencil size={15} /></button> : <button className="icon-button" title="عرض ملف المواطن" aria-label={`عرض ملف ${u.name}`} onClick={() => setViewCitizen(u)}><Eye size={15} /></button>}<button className="btn btn-small btn-light" onClick={() => void update(u,"status")}>{u.status === "active" ? "إيقاف" : "تفعيل"}</button>{tab === "employees" && <button className="icon-button danger-icon" title="حذف الحساب" onClick={() => void update(u,"delete")}><Trash2 size={15} /></button>}</div></td></tr>)}</tbody></table>
         {loading ? <div className="empty-state">جارٍ تحميل الحسابات...</div> : !filtered.length && <div className="empty-state">لا توجد حسابات مسجلة تطابق البحث.</div>}
       </div>
     </section>

@@ -38,7 +38,7 @@ CREATE TABLE IF NOT EXISTS public.users (
   email VARCHAR(255) UNIQUE,
   email_verified_at TIMESTAMPTZ,
   password VARCHAR(255) NOT NULL,
-  role VARCHAR(32) NOT NULL DEFAULT 'citizen',
+  role VARCHAR(32) NOT NULL DEFAULT 'employee',
   status VARCHAR(32) NOT NULL DEFAULT 'active',
   employee_number VARCHAR(64),
   job_title VARCHAR(120),
@@ -60,8 +60,10 @@ CREATE TABLE IF NOT EXISTS public.users (
 
 CREATE TABLE IF NOT EXISTS public.citizens (
   id BIGSERIAL PRIMARY KEY,
-  user_id BIGINT NOT NULL UNIQUE,
   name VARCHAR(255) NOT NULL,
+  email VARCHAR(255) UNIQUE,
+  password VARCHAR(255) NOT NULL,
+  status VARCHAR(32) NOT NULL DEFAULT 'active',
   gender VARCHAR(32),
   age VARCHAR(32),
   address TEXT,
@@ -73,10 +75,7 @@ CREATE TABLE IF NOT EXISTS public.citizens (
   back_of_card TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  CONSTRAINT citizens_user_id_foreign
-    FOREIGN KEY (user_id)
-    REFERENCES public.users(id)
-    ON DELETE CASCADE
+  CONSTRAINT citizens_status_check CHECK (status IN ('active','blocked'))
 );
 
 CREATE TABLE IF NOT EXISTS public.personal_access_tokens (
@@ -89,17 +88,13 @@ CREATE TABLE IF NOT EXISTS public.personal_access_tokens (
   last_used_at TIMESTAMPTZ,
   expires_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  CONSTRAINT personal_access_tokens_user_foreign
-    FOREIGN KEY (tokenable_id)
-    REFERENCES public.users(id)
-    ON DELETE CASCADE
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS public.citizen_login_requests (
   id BIGSERIAL PRIMARY KEY,
   request_id VARCHAR(64) NOT NULL UNIQUE,
-  user_id BIGINT NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  citizen_id BIGINT NOT NULL REFERENCES public.citizens(id) ON DELETE CASCADE,
   device_label VARCHAR(120) NOT NULL DEFAULT 'جهاز جديد',
   status VARCHAR(16) NOT NULL DEFAULT 'pending',
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -110,7 +105,7 @@ CREATE TABLE IF NOT EXISTS public.citizen_login_requests (
 CREATE TABLE IF NOT EXISTS public.reports (
   id BIGSERIAL PRIMARY KEY,
   reference VARCHAR(64) NOT NULL UNIQUE,
-  user_id BIGINT,
+  citizen_id BIGINT,
   title VARCHAR(255) NOT NULL,
   category VARCHAR(100) NOT NULL,
   description TEXT NOT NULL,
@@ -123,9 +118,9 @@ CREATE TABLE IF NOT EXISTS public.reports (
   image_type VARCHAR(100),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  CONSTRAINT reports_user_id_foreign
-    FOREIGN KEY (user_id)
-    REFERENCES public.users(id)
+  CONSTRAINT reports_citizen_id_foreign
+    FOREIGN KEY (citizen_id)
+    REFERENCES public.citizens(id)
     ON DELETE SET NULL
 );
 
@@ -177,11 +172,11 @@ CREATE INDEX IF NOT EXISTS personal_access_tokens_tokenable_idx
 CREATE INDEX IF NOT EXISTS reports_status_created_idx
   ON public.reports (status, created_at);
 
-CREATE INDEX IF NOT EXISTS reports_user_created_idx
-  ON public.reports (user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS reports_citizen_created_idx
+  ON public.reports (citizen_id, created_at DESC);
 
-CREATE INDEX IF NOT EXISTS citizen_login_requests_user_status_idx
-  ON public.citizen_login_requests (user_id, status, created_at DESC);
+CREATE INDEX IF NOT EXISTS citizen_login_requests_citizen_status_idx
+  ON public.citizen_login_requests (citizen_id, status, created_at DESC);
 
 CREATE INDEX IF NOT EXISTS reports_created_idx
   ON public.reports (created_at DESC, id DESC);
@@ -435,10 +430,10 @@ $$;
 -- =========================================================
 
 COMMENT ON TABLE public.users IS
-  'Application accounts for citizens, employees, managers, and admins.';
+  'Employee, manager, and administrator accounts; citizen credentials live in the citizens table.';
 
 COMMENT ON TABLE public.citizens IS
-  'Citizen profile and address details linked one-to-one to users.';
+  'Citizen credentials and profile details, kept separately from staff accounts.';
 
 COMMENT ON TABLE public.personal_access_tokens IS
   'Hashed bearer-token records used by the application API for sessions.';
@@ -529,8 +524,10 @@ WITH expected_columns(table_name, column_name) AS (
     ('users', 'updated_at'),
 
     ('citizens', 'id'),
-    ('citizens', 'user_id'),
     ('citizens', 'name'),
+    ('citizens', 'email'),
+    ('citizens', 'password'),
+    ('citizens', 'status'),
     ('citizens', 'gender'),
     ('citizens', 'age'),
     ('citizens', 'address'),
@@ -556,7 +553,7 @@ WITH expected_columns(table_name, column_name) AS (
 
     ('citizen_login_requests', 'id'),
     ('citizen_login_requests', 'request_id'),
-    ('citizen_login_requests', 'user_id'),
+    ('citizen_login_requests', 'citizen_id'),
     ('citizen_login_requests', 'device_label'),
     ('citizen_login_requests', 'status'),
     ('citizen_login_requests', 'created_at'),
@@ -564,7 +561,7 @@ WITH expected_columns(table_name, column_name) AS (
 
     ('reports', 'id'),
     ('reports', 'reference'),
-    ('reports', 'user_id'),
+    ('reports', 'citizen_id'),
     ('reports', 'title'),
     ('reports', 'category'),
     ('reports', 'description'),

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { randomUUID } from "node:crypto";
-import { createToken, publicUser, type AuthenticatedUser, verifyPassword } from "@/lib/auth";
+import { createCitizenToken, publicUser, type AuthenticatedUser, verifyPassword } from "@/lib/auth";
 import { assertDatabaseConfigured, execute, row } from "@/lib/database";
 import type { RowDataPacket } from "@/lib/database";
 
@@ -32,23 +32,23 @@ export async function POST(request: Request) {
   else if (password.length < 6) errors.password = ["The password field must be at least 6 characters."];
   if (Object.keys(errors).length) return failure("The given data was invalid.", 422, errors);
 
-  const user = await row<AuthenticatedUser & RowDataPacket>("SELECT * FROM users WHERE phone = ? AND role = 'citizen' AND status = 'active' LIMIT 1", [phone]);
+  const user = await row<AuthenticatedUser & RowDataPacket>("SELECT id,name,email,phone,password,status,created_at,updated_at,'citizen' AS role FROM citizens WHERE phone = ? AND status = 'active' LIMIT 1", [phone]);
   if (!user || !(await verifyPassword(password, user.password))) {
     return failure("Invalid phone number or password.", 401);
   }
 
   if (requiresApproval) {
-    const activeDevices = await row<{ total: number } & RowDataPacket>("SELECT COUNT(*) AS total FROM personal_access_tokens WHERE tokenable_id=? AND name <> 'admin-web' AND (expires_at IS NULL OR expires_at > CURRENT_TIMESTAMP)", [user.id]);
+    const activeDevices = await row<{ total: number } & RowDataPacket>("SELECT COUNT(*) AS total FROM personal_access_tokens WHERE tokenable_id=? AND tokenable_type='App\\Models\\Citizen' AND name <> 'admin-web' AND (expires_at IS NULL OR expires_at > CURRENT_TIMESTAMP)", [user.id]);
     if (Number(activeDevices?.total ?? 0) > 0) {
       const requestId = randomUUID();
-      await execute("UPDATE citizen_login_requests SET status='expired' WHERE user_id=? AND status='pending'", [user.id]);
-      await execute(`INSERT INTO citizen_login_requests(request_id,user_id,device_label,status,created_at,expires_at)
+      await execute("UPDATE citizen_login_requests SET status='expired' WHERE citizen_id=? AND status='pending'", [user.id]);
+      await execute(`INSERT INTO citizen_login_requests(request_id,citizen_id,device_label,status,created_at,expires_at)
         VALUES(?,?,?,'pending',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP + INTERVAL '5 minutes')`, [requestId, user.id, deviceLabel || "جهاز جديد"]);
       return NextResponse.json({ status: false, message: "يرجى انتظار موافقة صاحب الحساب.", data: { request_id: requestId, state: "pending", check_after_seconds: 3, expires_in_seconds: 300 } }, { status: 202 });
     }
   }
 
-  const token = await createToken(user.id);
+  const token = await createCitizenToken(user.id);
   return NextResponse.json({
     status: true,
     message: "Login successful",

@@ -26,7 +26,7 @@ export async function GET(request: Request) {
   const user = await currentCitizen(request);
   if (!user) return NextResponse.json({ message: "Unauthenticated." }, { status: 401 });
   const profile = await row<CitizenProfile & RowDataPacket>(`SELECT citizens.name,citizens.phone,citizens.gender,citizens.age,citizens.address,
-    citizens.governorate,citizens.city,citizens.national_id FROM citizens WHERE citizens.user_id=? LIMIT 1`, [user.id]);
+    citizens.governorate,citizens.city,citizens.national_id FROM citizens WHERE citizens.id=? LIMIT 1`, [user.id]);
   if (!profile) return NextResponse.json({ message: "بيانات المواطن غير موجودة." }, { status: 404 });
   return NextResponse.json({ status: true, data: { profile, ...completion(profile) } });
 }
@@ -53,8 +53,7 @@ export async function PATCH(request: Request) {
   const connection = await database.getConnection();
   try {
     await connection.beginTransaction();
-    await connection.execute("UPDATE users SET name=?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND role='citizen'", [name, user.id]);
-    await connection.execute(`UPDATE citizens SET name=?,gender=?,age=?,address=?,governorate=?,city=?,national_id=?,updated_at=CURRENT_TIMESTAMP WHERE user_id=?`,
+    await connection.execute(`UPDATE citizens SET name=?,gender=?,age=?,address=?,governorate=?,city=?,national_id=?,updated_at=CURRENT_TIMESTAMP WHERE id=?`,
       [name, gender || null, age || null, address || null, governorate, city, nationalId || null, user.id]);
     await connection.commit();
   } catch (error) {
@@ -62,7 +61,7 @@ export async function PATCH(request: Request) {
     throw error;
   } finally { connection.release(); }
   const profile = await row<CitizenProfile & RowDataPacket>(`SELECT citizens.name,citizens.phone,citizens.gender,citizens.age,citizens.address,
-    citizens.governorate,citizens.city,citizens.national_id FROM citizens WHERE citizens.user_id=? LIMIT 1`, [user.id]);
+    citizens.governorate,citizens.city,citizens.national_id FROM citizens WHERE citizens.id=? LIMIT 1`, [user.id]);
   if (!profile) return NextResponse.json({ message: "تعذر تحميل الملف بعد الحفظ." }, { status: 500 });
   return NextResponse.json({ status: true, message: "تم حفظ بيانات المواطن.", data: { profile, ...completion(profile) } });
 }

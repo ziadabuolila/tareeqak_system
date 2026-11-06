@@ -10,11 +10,17 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
   const admin = await getAdminForRequest(request);
   if (!admin) return NextResponse.json({ message: "Unauthenticated." }, { status: 401 });
   const id = Number((await context.params).id);
+  const isCitizen = new URL(request.url).searchParams.get("type") === "citizen";
   let body: Record<string, unknown>;
   try { body = await request.json(); } catch { return NextResponse.json({ message: "بيانات غير صالحة." }, { status: 422 }); }
   if (!Number.isSafeInteger(id)) return NextResponse.json({ message: "رقم الحساب غير صالح." }, { status: 422 });
   if (body.status !== undefined) {
     if (!["active","blocked"].includes(String(body.status))) return NextResponse.json({ message: "الحالة غير صالحة." }, { status: 422 });
+    if (isCitizen) {
+      const result = await execute("UPDATE citizens SET status=?,updated_at=CURRENT_TIMESTAMP WHERE id=?", [String(body.status), id]);
+      if (!result.affectedRows) return NextResponse.json({ message: "حساب المواطن غير موجود." }, { status: 404 });
+      return NextResponse.json({ status: true });
+    }
     if (id === admin.id && body.status === "blocked") return NextResponse.json({ message: "لا يمكن إيقاف حسابك الحالي." }, { status: 422 });
     const result = await execute("UPDATE users SET status=?,updated_at=CURRENT_TIMESTAMP WHERE id=?", [String(body.status),id]);
     if (!result.affectedRows) return NextResponse.json({ message: "الحساب غير موجود." }, { status: 404 });
@@ -68,7 +74,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
     throw error;
   }
   if (!result.affectedRows) return NextResponse.json({ message: "الحساب غير موجود." }, { status: 404 });
-  if (credentialsChanged) await execute("DELETE FROM personal_access_tokens WHERE tokenable_id=?", [id]);
+  if (credentialsChanged) await execute("DELETE FROM personal_access_tokens WHERE tokenable_id=? AND tokenable_type='App\\Models\\User'", [id]);
   const employee = (await rows<RowDataPacket>("SELECT id,name,email,phone,role,status,employee_number,job_title,department,employment_type,hire_date,birth_date,gender,national_id,address,emergency_contact_name,emergency_contact_phone,salary,notes,created_at FROM users WHERE id=?", [id]))[0];
   return NextResponse.json({ status: true, data: { employee } });
 }
@@ -77,8 +83,12 @@ export async function DELETE(request: Request, context: { params: Promise<{ id: 
   await assertDatabaseConfigured();
   const admin = await getAdminForRequest(request);
   if (!admin) return NextResponse.json({ message: "Unauthenticated." }, { status: 401 });
+  if (new URL(request.url).searchParams.get("type") === "citizen") {
+    return NextResponse.json({ message: "حذف حساب المواطن غير متاح من هذه الواجهة بعد فصل حساباته عن حسابات الموظفين." }, { status: 409 });
+  }
   const id = Number((await context.params).id);
   if (!Number.isSafeInteger(id) || id === admin.id) return NextResponse.json({ message: "لا يمكن حذف هذا الحساب." }, { status: 422 });
+  await execute("DELETE FROM personal_access_tokens WHERE tokenable_id=? AND tokenable_type='App\\Models\\User'", [id]);
   const result = await execute("DELETE FROM users WHERE id=?", [id]);
   if (!result.affectedRows) return NextResponse.json({ message: "الحساب غير موجود." }, { status: 404 });
   return NextResponse.json({ status: true });
