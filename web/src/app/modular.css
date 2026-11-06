@@ -2936,6 +2936,25 @@ html[data-theme="dark"] .report-detail-actions { background:linear-gradient(0deg
 html[data-theme="dark"] .session-block-overlay > div { background:#1a2620; color:#e6eee8; }
 @media(max-width:600px){.citizen-profile-grid{grid-template-columns:1fr 1fr}.report-detail{border-radius:21px 21px 15px 15px}}
 
+/* Consistent finish for the control panel */
+.panel { border-radius:18px; box-shadow:0 8px 28px #19392708; }
+.stat-card { border-radius:17px; transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease; }
+.stat-card:hover { transform:translateY(-2px); border-color:#cbded1; box-shadow:0 12px 30px #1939270d; }
+.panel-head { align-items:center; }
+.panel-head h3 { letter-spacing:-.15px; }
+.table-wrap { border-radius:14px; }
+.table-wrap tbody tr { transition:background-color .16s ease; }
+.table-wrap tbody tr:hover { background:#f4f9f5; }
+.btn { min-height:38px; border-radius:11px; transition:transform .15s ease,background .15s ease,border-color .15s ease,box-shadow .15s ease; }
+.btn:not(:disabled):active { transform:translateY(1px); }
+.btn:focus-visible,.icon-button:focus-visible,.text-button:focus-visible { outline:3px solid #27845155; outline-offset:2px; }
+.btn:disabled { cursor:wait; opacity:.62; }
+.search-box:focus-within { border-color:#76aa87; box-shadow:0 0 0 3px #27845116; }
+html[data-theme="dark"] .panel { box-shadow:0 8px 28px #00000020; }
+html[data-theme="dark"] .stat-card:hover { border-color:#52685a; box-shadow:0 12px 30px #0003; }
+html[data-theme="dark"] .table-wrap tbody tr:hover { background:#202e26; }
+@media(prefers-reduced-motion:reduce){.stat-card,.table-wrap tbody tr,.btn{transition:none}.stat-card:hover,.btn:not(:disabled):active{transform:none}}
+
 
 .inline-number-loader { display: inline-flex; width: 30px; height: 26px; align-items: center; justify-content: center; vertical-align: middle; color: #63a275; }
 .inline-number-loader svg { animation: inline-number-spin .9s linear infinite; }

@@ -23,7 +23,8 @@ function playNoticeSound() {
 export function useAdminNoticeCount() {
   const [count, setCount] = useState(0);
   useEffect(() => {
-    let latestId: number | null = null;
+    let latestId = 0;
+    let initialized = false;
     let inFlight = false;
     const unlockAudio = () => { audioReady = true; };
     window.addEventListener("pointerdown", unlockAudio, { once: true });
@@ -38,12 +39,13 @@ export function useAdminNoticeCount() {
         const notifications = result.data?.notifications ?? [];
         setCount(notifications.filter((notice) => !notice.read).length);
         const newestId = notifications[0]?.id ?? null;
-        if (latestId !== null && newestId !== null && newestId > latestId) {
+        if (initialized && newestId !== null && newestId > latestId) {
           const latest = notifications[0];
           toast(latest.title, { description: latest.body, duration: 5000 });
           playNoticeSound();
         }
-        if (newestId !== null) latestId = Math.max(latestId ?? newestId, newestId);
+        if (newestId !== null) latestId = Math.max(latestId, newestId);
+        initialized = true;
       } catch { /* Leave the latest badge unchanged during temporary network loss. */ }
       finally { inFlight = false; }
     };

@@ -41,6 +41,7 @@ export type UserRow = {
   city?: string;
   governorate?: string;
   age?: string | null; citizen_created_at?: string | null;
+  profile_complete?: boolean;
   reports?: number;
   role?: string;
   status: "active" | "blocked";
@@ -52,3 +53,10 @@ export type NoticeRow = { id: number; title: string; body: string; created_at: s
 export const statusLabel: Record<ReportRow["status"], string> = {
   pending: "جديد", in_progress: "قيد المعالجة", resolved: "تم الحل", rejected: "مرفوض",
 };
+
+export function reportLocationLabel(value: string | null | undefined) {
+  const location = value?.trim() ?? "";
+  const match = location.match(/^(-?\d{1,2}(?:\.\d+)?)\s*[,،]\s*(-?\d{1,3}(?:\.\d+)?)$/);
+  if (!match) return location || "—";
+  return `GPS · ${Number(match[1]).toFixed(5)}، ${Number(match[2]).toFixed(5)}`;
+}

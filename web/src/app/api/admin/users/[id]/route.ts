@@ -57,6 +57,9 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
     assignments.push("password=?"); values.push(await hashPassword(password));
   }
   if (!assignments.length) return NextResponse.json({ message: "لا توجد بيانات للتحديث." }, { status: 422 });
+  const previousUser = (await rows<{ email: string | null } & RowDataPacket>("SELECT email FROM users WHERE id=?", [id]))[0];
+  if (!previousUser) return NextResponse.json({ message: "الحساب غير موجود." }, { status: 404 });
+  const credentialsChanged = Boolean(password) || (typeof fields.email === "string" && fields.email.trim().toLowerCase() !== (previousUser.email ?? "").toLowerCase());
   values.push(id);
   let result;
   try { result = await execute(`UPDATE users SET ${assignments.join(",")},updated_at=CURRENT_TIMESTAMP WHERE id=?`, values); }
@@ -65,6 +68,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
     throw error;
   }
   if (!result.affectedRows) return NextResponse.json({ message: "الحساب غير موجود." }, { status: 404 });
+  if (credentialsChanged) await execute("DELETE FROM personal_access_tokens WHERE tokenable_id=?", [id]);
   const employee = (await rows<RowDataPacket>("SELECT id,name,email,phone,role,status,employee_number,job_title,department,employment_type,hire_date,birth_date,gender,national_id,address,emergency_contact_name,emergency_contact_phone,salary,notes,created_at FROM users WHERE id=?", [id]))[0];
   return NextResponse.json({ status: true, data: { employee } });
 }

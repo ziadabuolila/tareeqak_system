@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Activity, LocateFixed, MapPin, MapPinned, Search } from "lucide-react";
-import { ReportRow, statusLabel } from "@/lib/admin-api";
+import { ReportRow, reportLocationLabel, statusLabel } from "@/lib/admin-api";
 import { useLiveReports } from "@/lib/use-live-reports";
 import { InlineNumberLoader } from "@/components/InlineNumberLoader";
 
@@ -85,6 +85,7 @@ export default function MapPage() {
 
   useEffect(() => {
     let active = true;
+    const markerStore = markers.current;
     loadLeaflet().then((leaflet) => {
       if (!active || !mapElement.current || mapInstance.current) return;
       const map = leaflet.map(mapElement.current, { zoomControl: false, scrollWheelZoom: true }).setView([26.8, 30.8], 6);
@@ -92,7 +93,7 @@ export default function MapPage() {
       mapInstance.current = map;
       window.setTimeout(() => map.invalidateSize(), 80);
     }).catch((error: unknown) => { if (active) setMapError(error instanceof Error ? error.message : "تعذر تحميل الخريطة."); });
-    return () => { active = false; mapInstance.current?.remove(); mapInstance.current = null; markers.current.clear(); };
+    return () => { active = false; mapInstance.current?.remove(); mapInstance.current = null; markerStore.clear(); };
   }, []);
 
   useEffect(() => {
@@ -111,7 +112,7 @@ export default function MapPage() {
       marker.setLatLng(position);
       const popup = document.createElement("div");
       popup.className = "report-map-popup";
-      popup.innerHTML = `<strong>${safeText(report.title)}</strong><span>${safeText(report.reference)} · ${safeText(report.category)}</span><span>${safeText(statusLabel[report.status])}</span>`;
+      popup.innerHTML = `<strong>${safeText(report.title)}</strong><span>${safeText(report.reference)} · ${safeText(report.category)}</span><span>${safeText(reportLocationLabel(report.location))}</span><span>${safeText(statusLabel[report.status])}</span>`;
       marker.bindPopup(popup);
       markers.current.set(report.id, marker);
     }
@@ -128,7 +129,7 @@ export default function MapPage() {
     if (marker) {
       const popup = document.createElement("div");
       popup.className = "report-map-popup";
-      popup.innerHTML = `<strong>${safeText(report.title)}</strong><span>${safeText(report.reference)} · ${safeText(report.category)}</span><span>${safeText(statusLabel[report.status])}</span>`;
+      popup.innerHTML = `<strong>${safeText(report.title)}</strong><span>${safeText(report.reference)} · ${safeText(report.category)}</span><span>${safeText(reportLocationLabel(report.location))}</span><span>${safeText(statusLabel[report.status])}</span>`;
       marker.bindPopup(popup).openPopup();
     }
   }
@@ -153,7 +154,7 @@ export default function MapPage() {
           <div className="map-status-legend"><span><i className="pending-dot" /> جديد</span><span><i className="progress-dot" /> قيد المعالجة</span><span><i className="resolved-dot" /> تم الحل</span><span><i className="rejected-dot" /> مرفوض</span></div>
           <div className="map-report-list">{loading ? <div className="empty-state">جارٍ تحميل البلاغات...</div> : filtered.length ? filtered.map((report) => {
             const hasCoordinates = Boolean(getCoordinates(report.location));
-            return <button type="button" className={`map-list-report ${selected === report.id ? "selected" : ""}`} key={report.id} onClick={() => focusReport(report)}><span className={`map-list-pin ${report.status}`}><MapPin size={16} /></span><span className="map-list-copy"><b>{report.title}</b><small>{report.reference} · {report.city || report.governorate || (hasCoordinates ? "موقع GPS" : report.location || "موقع غير محدد")}</small></span><span className={`map-list-state ${report.status}`}>{statusLabel[report.status]}</span></button>;
+            return <button type="button" className={`map-list-report ${selected === report.id ? "selected" : ""}`} key={report.id} onClick={() => focusReport(report)}><span className={`map-list-pin ${report.status}`}><MapPin size={16} /></span><span className="map-list-copy"><b>{report.title}</b><small>{report.reference} · {report.city || report.governorate || (hasCoordinates ? "موقع GPS" : "موقع غير محدد")}</small><small>{reportLocationLabel(report.location)}</small></span><span className={`map-list-state ${report.status}`}>{statusLabel[report.status]}</span></button>;
           }) : <div className="empty-state">لا توجد بلاغات تطابق البحث.</div>}</div>
           <div className="map-side-footnote">{loading ? <InlineNumberLoader label="جارٍ تحميل المواقع" /> : rows.length - pinnedCount ? `${rows.length - pinnedCount} بلاغ بموقع نصّي دون إحداثيات؛ سيظهر على الخريطة بعد تحديد موقعه من التطبيق.` : "كل البلاغات المسجلة لها مواقع GPS."}</div>
         </aside>

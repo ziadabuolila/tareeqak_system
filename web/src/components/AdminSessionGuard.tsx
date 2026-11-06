@@ -12,7 +12,7 @@ export default function AdminSessionGuard() {
   const [blocked, setBlocked] = useState("");
 
   useEffect(() => {
-    if (pathname === "/login") return;
+    if (pathname === "/login") { setBlocked(""); return; }
     const check = async () => {
       const token = localStorage.getItem("tareeqak_admin_token");
       if (!token) { router.replace("/login"); return; }

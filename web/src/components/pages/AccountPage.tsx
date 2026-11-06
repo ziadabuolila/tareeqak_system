@@ -1,22 +1,27 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { BadgeCheck, Mail, Save, UserRound } from "lucide-react";
 import { adminRequest } from "@/lib/admin-api";
 import { useRouter } from "next/navigation";
+import { useLiveRefresh } from "@/lib/live-refresh";
 
 export default function AccountPage() {
   const router = useRouter();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [dirty, setDirty] = useState(false);
   const [saved, setSaved] = useState(false);
 
-  useEffect(() => {
+  const loadAccount = useCallback(() => {
+    if (dirty) return;
     adminRequest<{data:{user:{name:string;email:string|null}}}>("/admin/account").then((result) => {
       setName(result.data.user.name);
       setEmail(result.data.user.email || "");
     }).catch((cause) => setError(cause instanceof Error ? cause.message : "تعذر تحميل بيانات الحساب."));
-  }, []);
+  }, [dirty]);
+  useEffect(() => { void loadAccount(); }, [loadAccount]);
+  useLiveRefresh(loadAccount);
 
   const [error, setError] = useState("");
   async function submit(e: React.FormEvent) {
@@ -30,6 +35,7 @@ export default function AccountPage() {
         router.replace("/login");
       }
       setName(result.data.user.name); setEmail(result.data.user.email); setError(""); setSaved(true);
+      setDirty(false);
       setTimeout(() => setSaved(false), 2500);
     } catch (cause) { setError(cause instanceof Error ? cause.message : "تعذر حفظ بيانات الحساب."); }
   }
@@ -52,7 +58,7 @@ export default function AccountPage() {
           الاسم الظاهر
           <span className="account-input-wrap">
             <UserRound size={17} />
-            <input required value={name} onChange={(e) => setName(e.target.value)} placeholder="اكتب اسمك" autoComplete="name" />
+            <input required value={name} onChange={(e) => { setDirty(true); setName(e.target.value); }} placeholder="اكتب اسمك" autoComplete="name" />
           </span>
           <small>سيظهر هذا الاسم في القائمة الشخصية.</small>
         </label>
@@ -60,7 +66,7 @@ export default function AccountPage() {
           البريد الإلكتروني
           <span className="account-input-wrap" dir="ltr">
             <Mail size={17} />
-            <input required type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@example.com" autoComplete="email" />
+            <input required type="email" value={email} onChange={(e) => { setDirty(true); setEmail(e.target.value); }} placeholder="name@example.com" autoComplete="email" />
           </span>
           <small>استخدم بريدًا إلكترونيًا يمكنك الوصول إليه.</small>
         </label>

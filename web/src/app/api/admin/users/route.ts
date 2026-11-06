@@ -9,6 +9,7 @@ export async function GET(request: Request) {
   await assertDatabaseConfigured();
   if (!(await getAdminForRequest(request))) return NextResponse.json({ message: "Unauthenticated." }, { status: 401 });
   const citizens = await rows<RowDataPacket>(`SELECT users.id,users.name,users.email,users.phone,users.status,citizens.city,citizens.governorate,citizens.age,citizens.address,citizens.national_id,citizens.gender,citizens.created_at AS citizen_created_at,
+    (NULLIF(BTRIM(COALESCE(citizens.gender,'')),'') IS NOT NULL AND NULLIF(BTRIM(COALESCE(citizens.age,'')),'') IS NOT NULL AND NULLIF(BTRIM(COALESCE(citizens.address,'')),'') IS NOT NULL AND NULLIF(BTRIM(COALESCE(citizens.governorate,'')),'') IS NOT NULL AND NULLIF(BTRIM(COALESCE(citizens.city,'')),'') IS NOT NULL AND NULLIF(BTRIM(COALESCE(citizens.national_id,'')),'') IS NOT NULL) AS profile_complete,
     (SELECT COUNT(*) FROM reports WHERE reports.user_id=users.id) AS reports
     FROM users JOIN citizens ON citizens.user_id=users.id WHERE users.role='citizen' ORDER BY users.created_at DESC`);
   let employees: RowDataPacket[];
