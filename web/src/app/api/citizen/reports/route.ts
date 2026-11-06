@@ -21,7 +21,11 @@ export async function POST(request: Request) {
   try { body = await request.json(); } catch { return NextResponse.json({ message: "بيانات البلاغ غير صالحة." }, { status: 422 }); }
   const category = typeof body.category === "string" ? body.category.trim() : "";
   const description = typeof body.description === "string" ? body.description.trim() : "";
-  const location = typeof body.location === "string" ? body.location.trim() : "";
+  const suppliedLocation = typeof body.location === "string" ? body.location.trim() : "";
+  const latitude = Number(body.latitude);
+  const longitude = Number(body.longitude);
+  const hasCoordinates = body.latitude !== undefined && body.latitude !== null && body.latitude !== "" && body.longitude !== undefined && body.longitude !== null && body.longitude !== "" && Number.isFinite(latitude) && Number.isFinite(longitude) && Math.abs(latitude) <= 90 && Math.abs(longitude) <= 180;
+  const location = hasCoordinates ? `${latitude},${longitude}` : suppliedLocation;
   const citizen = await row<{ governorate: string; city: string } & RowDataPacket>("SELECT governorate,city FROM citizens WHERE user_id=? LIMIT 1", [user.id]);
   const governorate = typeof body.governorate === "string" ? body.governorate.trim() : citizen?.governorate ?? "";
   const city = typeof body.city === "string" ? body.city.trim() : citizen?.city ?? "";
@@ -43,6 +47,13 @@ export async function POST(request: Request) {
       RETURNING id`, [reference, user.id, category, category, description, governorate, city, location, null, imageData, imageData ? "image/jpeg" : null]);
     reportId = Number((insertResult.rows?.[0]?.id as number | string | null | undefined) ?? 0);
     await connection.execute("INSERT INTO notifications(title,body,kind) VALUES($1,$2,$3)", ["بلاغ جديد يحتاج للمراجعة", `تم تسجيل البلاغ ${reference} في ${city || location}.`, "warning"]);
+    const similar = await connection.execute(`SELECT COUNT(*) AS total FROM reports
+      WHERE category=$1 AND COALESCE(NULLIF(city,''), NULLIF(location,''), NULLIF(governorate,'')) =
+        COALESCE(NULLIF($2,''), NULLIF($3,''), NULLIF($4,'')) AND status IN ('pending','in_progress')`, [category, city, location, governorate]);
+    const similarCount = Number(similar.rows?.[0]?.total ?? 0);
+    if (similarCount >= 5 && similarCount % 5 === 0) {
+      await connection.execute("INSERT INTO notifications(title,body,kind) VALUES($1,$2,$3)", ["بلاغات متكررة — حالة خطرة", `وصل عدد البلاغات المفتوحة عن «${category}» في ${city || location || governorate} إلى ${similarCount} بلاغات.`, "warning"]);
+    }
     await connection.commit();
   } catch (error) {
     await connection.rollback();

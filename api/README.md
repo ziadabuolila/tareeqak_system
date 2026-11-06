@@ -6,6 +6,8 @@ Use `http://<computer-ip>:3000/api` as the base URL on a phone connected to the 
 
 ## Routes
 
+Citizen report submissions may include numeric `latitude` and `longitude` fields. When both values are valid, the API stores the GPS point as the report's `location` value so the admin map can plot the submitted position. Mobile clients should continue sending `city` and `governorate` for the readable area.
+
 - `POST /api/admin/login` with administrator `email` and `password` for the web dashboard.
 - `POST /api/citizen/register` with `name`, `phone`, `governorate`, `city`, `password`, and `password_confirmation`.
 - `POST /api/citizen/login` with `phone` and `password`.

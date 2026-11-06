@@ -13,5 +13,6 @@ export async function PATCH(request: Request) {
   if (newPassword.length < 8) return NextResponse.json({ message: "كلمة المرور الجديدة يجب أن تكون 8 أحرف على الأقل." }, { status: 422 });
   if (!(await verifyPassword(currentPassword, user.password))) return NextResponse.json({ message: "كلمة المرور الحالية غير صحيحة." }, { status: 422 });
   await execute("UPDATE users SET password=?,updated_at=CURRENT_TIMESTAMP WHERE id=?", [await hashPassword(newPassword),user.id]);
+  await execute("DELETE FROM personal_access_tokens WHERE tokenable_id=?", [user.id]);
   return NextResponse.json({ status: true, message: "تم تحديث كلمة المرور." });
 }

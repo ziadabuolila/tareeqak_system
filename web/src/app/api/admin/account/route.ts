@@ -20,6 +20,7 @@ export async function PATCH(request: Request) {
   if (!name || !/^\S+@\S+\.\S+$/.test(email)) return NextResponse.json({ message: "أدخل اسمًا وبريدًا إلكترونيًا صحيحًا." }, { status: 422 });
   try {
     await execute("UPDATE users SET name=?,email=?,updated_at=CURRENT_TIMESTAMP WHERE id=?", [name,email,user.id]);
+    if (email !== (user.email ?? "").toLowerCase()) await execute("DELETE FROM personal_access_tokens WHERE tokenable_id=?", [user.id]);
     const updated = await row<typeof user & RowDataPacket>("SELECT * FROM users WHERE id=?", [user.id]);
     return NextResponse.json({ status: true, data: { user: publicUser(updated) } });
   } catch (error) {

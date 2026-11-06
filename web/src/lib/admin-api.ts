@@ -40,6 +40,7 @@ export type UserRow = {
   phone: string;
   city?: string;
   governorate?: string;
+  age?: string | null; citizen_created_at?: string | null;
   reports?: number;
   role?: string;
   status: "active" | "blocked";

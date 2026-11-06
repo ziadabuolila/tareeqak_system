@@ -1,22 +1,26 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
-import { BarChart3, CheckCircle2, Clock3, ClipboardList, MapPin, Users } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { BarChart3, CheckCircle2, Clock3, ClipboardList, Download, MapPin, Users } from "lucide-react";
 import { adminRequest, UserRow } from "@/lib/admin-api";
 import { useLiveReports } from "@/lib/use-live-reports";
 import { InlineNumberLoader } from "@/components/InlineNumberLoader";
+import { useLiveRefresh } from "@/lib/live-refresh";
+import { downloadExcel } from "@/lib/excel-export";
 
 export default function AnalyticsPage() {
-  const { reports, loading: reportsLoading, error: reportsError } = useLiveReports();
+  const { reports, error: reportsError } = useLiveReports();
   const [users, setUsers] = useState<UserRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  useEffect(() => {
+  const loadUsers = useCallback(() => {
     adminRequest<{ data: { citizens: UserRow[] } }>("/admin/users")
       .then((userResult) => { setUsers(userResult.data.citizens); })
       .catch((cause: unknown) => setError(cause instanceof Error ? cause.message : "تعذر تحميل الإحصائيات."))
       .finally(() => setLoading(false));
   }, []);
+  useEffect(() => { void loadUsers(); }, [loadUsers]);
+  useLiveRefresh(loadUsers);
 
   const total = reports.length;
   const resolved = reports.filter((report) => report.status === "resolved").length;
@@ -34,9 +38,15 @@ export default function AnalyticsPage() {
       .sort((first, second) => second.count - first.count),
     [reports],
   );
+  const exportAnalytics = () => downloadExcel("tareeqak-analytics", "تقرير طريقك للإحصائيات", ["المؤشر", "القيمة"], [
+    ["إجمالي البلاغات", total], ["المواطنون", users.length], ["نسبة الحل", `${resolutionRate}%`], ["بانتظار المراجعة", pending],
+    ...statuses.map((status) => [status.label, reports.filter((report) => report.status === status.key).length]),
+    ...areas.map((area) => [`بلاغات منطقة ${area.city}`, area.count]),
+  ]);
 
   return <>
     {(error || reportsError) && <p className="error-message" role="alert">{error || reportsError}</p>}
+    <div className="analytics-export-row"><button className="btn btn-light" onClick={exportAnalytics}><Download size={16} /> تنزيل تقرير Excel</button></div>
     <div className="stats-grid analytics-stats">
       <article className="stat-card"><div className="stat-top">إجمالي البلاغات <ClipboardList size={20} /></div><div className="stat-value">{loading ? <InlineNumberLoader label="جارٍ تحميل إجمالي البلاغات" /> : total}</div><div className="stat-bottom">من قاعدة البيانات</div></article>
       <article className="stat-card"><div className="stat-top">المواطنون <Users size={20} /></div><div className="stat-value">{loading ? <InlineNumberLoader label="جارٍ تحميل عدد المواطنين" /> : users.length}</div><div className="stat-bottom">حسابات فعلية مسجلة</div></article>

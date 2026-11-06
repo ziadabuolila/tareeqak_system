@@ -3,8 +3,10 @@
 import { useEffect, useState } from "react";
 import { BadgeCheck, Mail, Save, UserRound } from "lucide-react";
 import { adminRequest } from "@/lib/admin-api";
+import { useRouter } from "next/navigation";
 
 export default function AccountPage() {
+  const router = useRouter();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [saved, setSaved] = useState(false);
@@ -23,6 +25,10 @@ export default function AccountPage() {
       const result = await adminRequest<{data:{user:{name:string;email:string}}}>("/admin/account", { method: "PATCH", body: JSON.stringify({ name, email }) });
       localStorage.setItem("tareeqak_admin_name", result.data.user.name);
       localStorage.setItem("tareeqak_admin_email", result.data.user.email);
+      if (result.data.user.email !== email.trim().toLowerCase()) {
+        localStorage.removeItem("tareeqak_admin_token");
+        router.replace("/login");
+      }
       setName(result.data.user.name); setEmail(result.data.user.email); setError(""); setSaved(true);
       setTimeout(() => setSaved(false), 2500);
     } catch (cause) { setError(cause instanceof Error ? cause.message : "تعذر حفظ بيانات الحساب."); }

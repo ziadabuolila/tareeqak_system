@@ -5,6 +5,7 @@ import { Download, Search, Eye } from "lucide-react";
 import { adminRequest, ReportRow, statusLabel } from "@/lib/admin-api";
 import { useLiveReports } from "@/lib/use-live-reports";
 import { InlineNumberLoader } from "@/components/InlineNumberLoader";
+import { downloadExcel } from "@/lib/excel-export";
 
 export default function ReportsPage() {
   const { reports: rows, setReports: setRows, loading, error, setError } = useLiveReports();
@@ -30,17 +31,12 @@ export default function ReportsPage() {
     const text = `${report.reference} ${report.title} ${report.city} ${report.user_name ?? ""} ${report.user_phone ?? ""}`.toLowerCase();
     return (filter === "all" || report.status === filter) && text.includes(q.trim().toLowerCase());
   }), [rows, filter, q]);
-  function exportCsv() {
-    const quote = (value: unknown) => `"${String(value ?? "").replaceAll('"', '""')}"`;
-    const data = [["رقم البلاغ", "العنوان", "المستخدم", "المنطقة", "الحالة"], ...filtered.map((r) => [r.reference,r.title,r.user_name ?? r.user_phone ?? "",r.city,statusLabel[r.status]])];
-    const blob = new Blob(["\uFEFF", data.map((row) => row.map(quote).join(",")).join("\r\n")], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob); const link = document.createElement("a"); link.href = url; link.download = "tareeqak-reports.csv"; link.click(); URL.revokeObjectURL(url);
-  }
+  function exportExcel() { downloadExcel("tareeqak-reports", "تقرير البلاغات", ["رقم البلاغ", "العنوان", "المستخدم", "المنطقة", "الحالة"], filtered.map((r) => [r.reference,r.title,r.user_name ?? r.user_phone ?? "",r.city || r.location,statusLabel[r.status]])); }
   return <section className="panel">
     {error && <p className="error-message" role="alert">{error}</p>}
     <div className="toolbar"><div className="search-box"><Search size={17} /><input placeholder="ابحث برقم البلاغ أو العنوان أو المنطقة..." value={q} onChange={(e) => setQ(e.target.value)} /></div>
       <select value={filter} onChange={(e) => setFilter(e.target.value)}><option value="all">كل الحالات</option><option value="pending">جديد</option><option value="in_progress">قيد المعالجة</option><option value="resolved">تم الحل</option><option value="rejected">مرفوض</option></select>
-      <button className="btn btn-light" onClick={exportCsv} disabled={!filtered.length}><Download size={16} /> تصدير CSV</button>
+      <button className="btn btn-light" onClick={exportExcel} disabled={!filtered.length}><Download size={16} /> تصدير Excel</button>
     </div>
     <div className="results-note">عدد النتائج: <b>{loading ? <InlineNumberLoader label="جارٍ تحميل عدد النتائج" /> : filtered.length}</b><small className="live-update-note">يتحدث تلقائيًا كل 10 ثوانٍ</small></div>
     <div className="table-wrap"><table><thead><tr><th>رقم البلاغ</th><th>العنوان والتصنيف</th><th>المستخدم</th><th>المنطقة</th><th>الحالة</th><th>تغيير الحالة</th><th>التفاصيل</th></tr></thead>

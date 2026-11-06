@@ -1,8 +1,9 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
-import { Plus, Search, UserRoundCheck, UserRoundX, Trash2, UsersRound, UserRound, Pencil } from "lucide-react";
+import { Plus, Search, UserRoundCheck, UserRoundX, Trash2, UsersRound, UserRound, Pencil, Eye } from "lucide-react";
 import { adminRequest, UserRow } from "@/lib/admin-api";
 import { InlineNumberLoader } from "@/components/InlineNumberLoader";
+import { useLiveRefresh } from "@/lib/live-refresh";
 
 type UsersResponse = { data: { citizens: UserRow[]; employees: UserRow[] } };
 const roleNames: Record<string, string> = { admin: "مسؤول النظام", manager: "مدير", employee: "موظف" };
@@ -14,14 +15,16 @@ export default function UsersPage() {
   const emptyForm = () => ({ name: "", email: "", phone: "", password: "", confirmPassword: "", role: "employee", employee_number: "", job_title: "", department: "", employment_type: "full_time", hire_date: "", birth_date: "", gender: "", national_id: "", address: "", emergency_contact_name: "", emergency_contact_phone: "", salary: "", notes: "" });
   const [form, setForm] = useState(emptyForm);
   const [editing, setEditing] = useState<UserRow | null>(null);
+  const [viewCitizen, setViewCitizen] = useState<UserRow | null>(null);
   const [error, setError] = useState(""); const [loading, setLoading] = useState(true); const [pendingDelete, setPendingDelete] = useState<UserRow | null>(null);
-  async function load() {
-    setLoading(true);
+  async function load(silent = false) {
+    if (!silent) setLoading(true);
     try { const result = await adminRequest<UsersResponse>("/admin/users"); setCitizens(result.data.citizens); setEmployees(result.data.employees); setError(""); }
     catch (cause) { setError(cause instanceof Error ? cause.message : "تعذر تحميل الحسابات."); }
     finally { setLoading(false); }
   }
   useEffect(() => { void load(); }, []);
+  useLiveRefresh(() => load(true));
   const current = tab === "employees" ? employees : citizens;
   const filtered = useMemo(() => current.filter((u) => (filter === "all" || u.status === filter) && `${u.name} ${u.email ?? ""} ${u.phone} ${u.city ?? ""} ${u.role ?? ""}`.toLowerCase().includes(q.toLowerCase())), [current, filter, q]);
   async function update(user: UserRow, action: "status" | "delete") {
@@ -79,7 +82,7 @@ export default function UsersPage() {
       </div>
       <div className="user-summary"><span><UserRoundCheck size={17} /> نشط: <b>{loading ? <InlineNumberLoader label="جارٍ تحميل عدد الحسابات النشطة" /> : current.filter((u) => u.status === "active").length}</b></span><span><UserRoundX size={17} /> موقوف: <b>{loading ? <InlineNumberLoader label="جارٍ تحميل عدد الحسابات الموقوفة" /> : current.filter((u) => u.status === "blocked").length}</b></span></div>
       <div className="table-wrap"><table><thead><tr><th>{tab === "employees" ? "الموظف" : "المواطن"}</th>{tab === "employees" && <th>الدور</th>}<th>الهاتف</th>{tab === "citizens" && <><th>المنطقة</th><th>البلاغات</th></>}{tab === "employees" && <th>الحالة</th>}{tab === "citizens" && <th>الحالة</th>}<th>إجراءات</th></tr></thead>
-        <tbody>{filtered.map((u) => <tr key={u.id}><td><div className="user-cell"><span className="avatar">{u.name.slice(0,1)}</span><span><b>{u.name}</b><small>{u.email || "—"}</small></span></div></td>{tab === "employees" && <td>{roleNames[u.role ?? "employee"]}</td>}<td>{u.phone}</td>{tab === "citizens" && <><td>{[u.city,u.governorate].filter(Boolean).join("، ") || "—"}</td><td>{u.reports ?? 0}</td></>}<td><span className={`status-pill ${u.status === "active" ? "resolved" : "rejected"}`}><i />{u.status === "active" ? "نشط" : "موقوف"}</span></td><td><div className="inline-actions">{tab === "employees" && <button className="icon-button" title="تعديل بيانات الموظف" aria-label={`تعديل ${u.name}`} onClick={() => startEdit(u)}><Pencil size={15} /></button>}<button className="btn btn-small btn-light" onClick={() => void update(u,"status")}>{u.status === "active" ? "إيقاف" : "تفعيل"}</button><button className="icon-button danger-icon" title="حذف الحساب" onClick={() => void update(u,"delete")}><Trash2 size={15} /></button></div></td></tr>)}</tbody></table>
+        <tbody>{filtered.map((u) => <tr key={u.id}><td><div className="user-cell"><span className="avatar">{u.name.slice(0,1)}</span><span><b>{u.name}</b><small>{u.email || "—"}</small></span></div></td>{tab === "employees" && <td>{roleNames[u.role ?? "employee"]}</td>}<td>{u.phone}</td>{tab === "citizens" && <><td>{[u.city,u.governorate].filter(Boolean).join("، ") || "—"}</td><td>{u.reports ?? 0}</td></>}<td><span className={`status-pill ${u.status === "active" ? "resolved" : "rejected"}`}><i />{u.status === "active" ? "نشط" : "موقوف"}</span></td><td><div className="inline-actions">{tab === "employees" ? <button className="icon-button" title="تعديل بيانات الموظف" aria-label={`تعديل ${u.name}`} onClick={() => startEdit(u)}><Pencil size={15} /></button> : <button className="icon-button" title="عرض ملف المواطن" aria-label={`عرض ملف ${u.name}`} onClick={() => setViewCitizen(u)}><Eye size={15} /></button>}<button className="btn btn-small btn-light" onClick={() => void update(u,"status")}>{u.status === "active" ? "إيقاف" : "تفعيل"}</button><button className="icon-button danger-icon" title="حذف الحساب" onClick={() => void update(u,"delete")}><Trash2 size={15} /></button></div></td></tr>)}</tbody></table>
         {loading ? <div className="empty-state">جارٍ تحميل الحسابات...</div> : !filtered.length && <div className="empty-state">لا توجد حسابات مسجلة تطابق البحث.</div>}
       </div>
     </section>
@@ -117,6 +120,7 @@ export default function UsersPage() {
       <footer className="modal-actions"><button type="button" className="btn btn-light" onClick={() => setOpen(false)}>إلغاء</button><button className="btn btn-primary">{editing ? <><Pencil size={15} /> حفظ التعديلات</> : <><Plus size={16} /> إنشاء الحساب</>}</button></footer>
     </form></div>}
     {pendingDelete && <div className="modal-backdrop" onMouseDown={(event) => event.target === event.currentTarget && setPendingDelete(null)}><section className="confirm-modal modal-panel danger-confirm" role="alertdialog" aria-modal="true" aria-labelledby="delete-user-title" aria-describedby="delete-user-copy"><button type="button" className="modal-x" aria-label="إغلاق" onClick={() => setPendingDelete(null)}>×</button><span className="modal-heading-icon danger"><Trash2 size={20} /></span><h2 id="delete-user-title">تأكيد حذف الحساب</h2><p id="delete-user-copy">سيتم حذف حساب <b>{pendingDelete.name}</b> نهائيًا. هل تريد المتابعة؟</p><footer className="modal-actions"><button className="btn btn-light" onClick={() => setPendingDelete(null)}>إلغاء</button><button className="btn btn-danger" onClick={() => void confirmDelete()}><Trash2 size={15} /> حذف الحساب</button></footer></section></div>}
+    {viewCitizen && <div className="modal-backdrop" onMouseDown={(event) => event.target === event.currentTarget && setViewCitizen(null)}><section className="confirm-modal modal-panel citizen-profile-modal" role="dialog" aria-modal="true" aria-labelledby="citizen-profile-title"><button type="button" className="modal-x" aria-label="إغلاق ملف المواطن" onClick={() => setViewCitizen(null)}>×</button><header className="modal-heading"><span className="modal-heading-icon employee"><UserRound size={20} /></span><div><h2 id="citizen-profile-title">ملف المواطن</h2><p>البيانات التي سجلها المواطن في التطبيق.</p></div></header><div className="citizen-profile-grid">{[["الاسم",viewCitizen.name],["الهاتف",viewCitizen.phone],["البريد الإلكتروني",viewCitizen.email],["النوع",viewCitizen.gender],["العمر",viewCitizen.age],["الرقم القومي",viewCitizen.national_id],["المحافظة",viewCitizen.governorate],["المنطقة",viewCitizen.city],["العنوان",viewCitizen.address],["عدد البلاغات",viewCitizen.reports],["تاريخ التسجيل",viewCitizen.citizen_created_at]].map(([label,value]) => <div key={label}><small>{label}</small><b>{value || "غير مسجل"}</b></div>)}</div><footer className="modal-actions"><button type="button" className="btn btn-light" onClick={() => setViewCitizen(null)}>إغلاق</button></footer></section></div>}
   </>;
 }
 

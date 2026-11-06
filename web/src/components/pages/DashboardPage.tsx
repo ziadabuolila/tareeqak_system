@@ -1,20 +1,23 @@
 "use client";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Activity, ArrowUpLeft, ClipboardList, Clock3, CheckCircle2, Users, MapPin, Eye, TrendingUp } from "lucide-react";
 import { adminRequest, UserRow, statusLabel } from "@/lib/admin-api";
 import { useLiveReports } from "@/lib/use-live-reports";
 import { InlineNumberLoader } from "@/components/InlineNumberLoader";
+import { useLiveRefresh } from "@/lib/live-refresh";
 
 export default function DashboardPage() {
   const { reports, loading: reportsLoading, error: reportsError } = useLiveReports();
   const [users, setUsers] = useState<UserRow[]>([]); const [loading, setLoading] = useState(true); const [error, setError] = useState("");
-  useEffect(() => {
+  const loadUsers = useCallback(() => {
     adminRequest<{ data: { citizens: UserRow[] } }>("/admin/users")
       .then((userResult) => { setUsers(userResult.data.citizens); })
       .catch((cause) => setError(cause instanceof Error ? cause.message : "تعذر تحميل ملخص النظام."))
       .finally(() => setLoading(false));
   }, []);
+  useEffect(() => { void loadUsers(); }, [loadUsers]);
+  useLiveRefresh(loadUsers);
   const stats = [
     { label:"إجمالي البلاغات", value:reports.length, sub:"البلاغات المسجلة", icon:ClipboardList, tone:"green" },
     { label:"بلاغات جديدة", value:reports.filter((r)=>r.status==="pending").length, sub:"تحتاج إلى مراجعة", icon:Clock3, tone:"orange" },

@@ -3,8 +3,10 @@
 import { useState } from "react";
 import { Check, KeyRound, LockKeyhole, ShieldCheck } from "lucide-react";
 import { adminRequest } from "@/lib/admin-api";
+import { useRouter } from "next/navigation";
 
 export default function PasswordPage() {
+  const router = useRouter();
   const [oldPass, setOld] = useState("");
   const [next, setNext] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -21,7 +23,7 @@ export default function PasswordPage() {
       return;
     }
     void adminRequest<{message:string}>("/admin/password", { method: "PATCH", body: JSON.stringify({ currentPassword: oldPass, newPassword: next }) })
-      .then((result) => { setMsg(result.message || "تم تحديث كلمة المرور."); setOld(""); setNext(""); setConfirm(""); })
+      .then((result) => { localStorage.removeItem("tareeqak_admin_token"); router.replace("/login"); setMsg(result.message || "تم تحديث كلمة المرور. سجّل الدخول بكلمة المرور الجديدة."); setOld(""); setNext(""); setConfirm(""); })
       .catch((cause) => setMsg(cause instanceof Error ? cause.message : "تعذر تحديث كلمة المرور."));
   }
 

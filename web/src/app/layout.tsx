@@ -5,6 +5,8 @@ import "./modular.css";
 import NavigationFeedback from "@/components/NavigationFeedback";
 import DemoDataCleanup from "@/components/DemoDataCleanup";
 import ThemeBootstrap from "@/components/ThemeBootstrap";
+import AdminSessionGuard from "@/components/AdminSessionGuard";
+import { LiveRefreshProvider } from "@/lib/live-refresh";
 import { Toaster } from "sonner";
 export const metadata: Metadata = {
   title: "طريقك | لوحة التحكم",
@@ -20,6 +22,8 @@ export default function RootLayout({
       <body>
         <Toaster dir="rtl" position="top-center" richColors closeButton duration={3500} />
         <ThemeBootstrap />
+        <LiveRefreshProvider />
+        <AdminSessionGuard />
         <DemoDataCleanup />
         <NavigationFeedback>{children}</NavigationFeedback>
       </body>

@@ -8,7 +8,7 @@ export const runtime = "nodejs";
 export async function GET(request: Request) {
   await assertDatabaseConfigured();
   if (!(await getAdminForRequest(request))) return NextResponse.json({ message: "Unauthenticated." }, { status: 401 });
-  const citizens = await rows<RowDataPacket>(`SELECT users.id,users.name,users.email,users.phone,users.status,citizens.city,citizens.governorate,
+  const citizens = await rows<RowDataPacket>(`SELECT users.id,users.name,users.email,users.phone,users.status,citizens.city,citizens.governorate,citizens.age,citizens.address,citizens.national_id,citizens.gender,citizens.created_at AS citizen_created_at,
     (SELECT COUNT(*) FROM reports WHERE reports.user_id=users.id) AS reports
     FROM users JOIN citizens ON citizens.user_id=users.id WHERE users.role='citizen' ORDER BY users.created_at DESC`);
   let employees: RowDataPacket[];
