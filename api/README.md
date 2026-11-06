@@ -10,7 +10,7 @@ Citizen report submissions may include numeric `latitude` and `longitude` fields
 
 - `POST /api/admin/login` with administrator `email` and `password` for the web dashboard.
 - `POST /api/citizen/register` with `name`, `phone`, `governorate`, `city`, `password`, and `password_confirmation`. Registration creates the credential and profile only in `citizens`; it does not create a row in the staff `users` table or an authenticated session.
-- `POST /api/citizen/login` with `phone` and `password`.
+- `POST /api/citizen/login` with `phone`, `password`, and (for current mobile apps) a persistent installation `device_id` plus `requires_approval: true`.
 - `GET /api/citizen/me` with `Authorization: Bearer <token>`.
 - `DELETE /api/citizen/me` with `Authorization: Bearer <token>` to revoke the current token.
 
@@ -21,10 +21,12 @@ Citizen report submissions may include numeric `latitude` and `longitude` fields
 - `GET /api/citizen/me` also includes `profile`, `profile_complete`, and `profile_missing_fields` so the app can ask only citizens with unfinished profiles.
 - If a token still belongs to a citizen account that was blocked, `GET /api/citizen/me` returns HTTP 403 with `data.reason: "account_blocked"` and an Arabic message. Invalid or revoked tokens continue to return HTTP 401.
 - For approval based sign-in, the app sends `requires_approval: true` and `device_label` to `POST /api/citizen/login`. If another mobile session exists, HTTP 202 returns `request_id` and the recommended polling interval.
+- The app keeps a random installation ID outside the login session and sends it as `device_id` on login and `X-Device-ID` with authenticated requests. The system records the account's primary device, so that same phone can sign in directly after an administrator reactivates the account. A different phone still needs approval while another mobile session exists; approving it transfers the primary-device marker.
+- When upgrading an older account that has no recorded device ID, a single untagged legacy mobile session is claimed by the first upgraded app installation. This allows the original phone to recover after a block even when the older app had already cleared its local session. Multiple ambiguous legacy sessions still require approval.
 - The existing device polls `GET /api/citizen/login-requests` with its bearer token and decides through `PATCH /api/citizen/login-requests/{request_id}` using `{ "action": "approve" }` or `{ "action": "reject" }`.
 - The requesting device polls `GET /api/citizen/login-requests/{request_id}`. An approved request returns the new bearer token once and revokes the previous mobile sessions; a rejected request returns `state: "rejected"`.
 
-Citizen credentials and staff accounts are separate: citizen tokens use the `App\Models\Citizen` token type, and citizen reports and login approvals reference `citizens.id`. For an existing database, apply `web/supabase/migrations/202611060001_citizen_accounts_separate_from_users.sql` once to move existing citizen credentials, tokens, reports, and pending approvals onto the citizen records and remove their duplicate `users` rows. For a new database, use the updated `web/supabase/schema.sql` instead.
+Citizen credentials and staff accounts are separate: citizen tokens use the `App\Models\Citizen` token type, and citizen reports and login approvals reference `citizens.id`. For an existing database, apply `web/supabase/migrations/202611060001_citizen_accounts_separate_from_users.sql` once to move existing citizen credentials, tokens, reports, and pending approvals onto the citizen records and remove their duplicate `users` rows, then apply `web/supabase/migrations/202611060002_primary_citizen_device.sql` for primary-device recognition. For a new database, use the updated `web/supabase/schema.sql` instead.
 
 The device approval flow requires the updated citizen tables in `web/supabase/schema.sql` (or the migration above on an existing database). Apply the schema change before enabling `requires_approval` in the mobile app.
 

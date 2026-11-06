@@ -6,6 +6,7 @@ import type { RowDataPacket } from "@/lib/database";
 
 export const runtime = "nodejs";
 type Params = { params: Promise<{ requestId: string }> };
+const deviceIdPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export async function PATCH(request: Request, context: Params) {
   await assertDatabaseConfigured();
@@ -49,8 +50,8 @@ export async function GET(_request: Request, context: Params) {
   const connection = await database.getConnection();
   try {
     await connection.beginTransaction();
-    const found = await connection.execute<{ citizen_id: number; status: string; expires_at: string } & RowDataPacket>(
-      "SELECT citizen_id,status,expires_at FROM citizen_login_requests WHERE request_id=? FOR UPDATE", [requestId]);
+    const found = await connection.execute<{ citizen_id: number; status: string; expires_at: string; device_id: string | null } & RowDataPacket>(
+      "SELECT citizen_id,status,expires_at,device_id FROM citizen_login_requests WHERE request_id=? FOR UPDATE", [requestId]);
     const loginRequest = found.rows[0];
     if (!loginRequest) { await connection.rollback(); return NextResponse.json({ message: "طلب تسجيل الدخول غير موجود." }, { status: 404 }); }
     if (loginRequest.status === "pending" && new Date(loginRequest.expires_at).valueOf() <= Date.now()) {
@@ -74,9 +75,12 @@ export async function GET(_request: Request, context: Params) {
     }
     const secret = randomBytes(32).toString("hex");
     const tokenHash = createHash("sha256").update(secret).digest("hex");
+    const deviceId = loginRequest.device_id && deviceIdPattern.test(loginRequest.device_id) ? loginRequest.device_id.toLowerCase() : "";
+    const tokenName = deviceId ? `mobile-app:${deviceId}` : "mobile-app";
     const created = await connection.execute<{ id: number } & RowDataPacket>(`INSERT INTO personal_access_tokens(tokenable_type,tokenable_id,name,token,abilities,created_at,updated_at)
-      VALUES('App\\Models\\Citizen',?,'mobile-app',?,'["*"]',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP) RETURNING id`, [user.id, tokenHash]);
+      VALUES('App\\Models\\Citizen',?,?,?,'["*"]',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP) RETURNING id`, [user.id, tokenName, tokenHash]);
     const token = `${created.rows[0].id}|${secret}`;
+    if (deviceId) await connection.execute("UPDATE citizens SET primary_device_id=? WHERE id=?", [deviceId, user.id]);
     await connection.execute("UPDATE citizen_login_requests SET status='completed' WHERE request_id=?", [requestId]);
     await connection.commit();
     return NextResponse.json({ status: true, message: "Login successful", data: { state: "completed", user, token, token_type: "Bearer" } }, { headers: { "Cache-Control": "no-store" } });

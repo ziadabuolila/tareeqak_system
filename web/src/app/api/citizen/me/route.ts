@@ -5,6 +5,7 @@ import { database, execute, assertDatabaseConfigured, isDuplicateError, row } fr
 import type { RowDataPacket } from "@/lib/database";
 
 export const runtime = "nodejs";
+const deviceIdPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export async function GET(request: Request) {
   await assertDatabaseConfigured();
@@ -20,14 +21,23 @@ export async function GET(request: Request) {
         const tokenHash = createHash("sha256").update(secret).digest("hex");
         const blocked = await row<RowDataPacket>(`SELECT citizens.status FROM personal_access_tokens
           JOIN citizens ON citizens.id=personal_access_tokens.tokenable_id
-          WHERE personal_access_tokens.id=? AND personal_access_tokens.token=? AND personal_access_tokens.tokenable_type=? LIMIT 1`,
+          WHERE personal_access_tokens.id=? AND personal_access_tokens.token=? AND personal_access_tokens.tokenable_type=?
+            AND (personal_access_tokens.expires_at IS NULL OR personal_access_tokens.expires_at>CURRENT_TIMESTAMP) LIMIT 1`,
         [tokenId, tokenHash, "App\\Models\\Citizen"]);
         if (blocked && blocked.status !== "active") {
+          const deviceId = request.headers.get("x-device-id")?.trim() ?? "";
+          if (deviceIdPattern.test(deviceId)) {
+            await execute("UPDATE citizens SET primary_device_id=? WHERE id=(SELECT tokenable_id FROM personal_access_tokens WHERE id=?) AND primary_device_id IS NULL", [deviceId.toLowerCase(), tokenId]);
+          }
           return NextResponse.json({ status: false, message: "تم إيقاف حسابك من النظام.", data: { reason: "account_blocked" } }, { status: 403 });
         }
       }
     }
     return NextResponse.json({ status: false, message: "Unauthenticated.", data: {} }, { status: 401 });
+  }
+  const deviceId = request.headers.get("x-device-id")?.trim() ?? "";
+  if (deviceIdPattern.test(deviceId)) {
+    await execute("UPDATE citizens SET primary_device_id=? WHERE id=? AND primary_device_id IS NULL", [deviceId.toLowerCase(), user.id]);
   }
   const profile = await row<RowDataPacket>("SELECT name,phone,gender,age,address,governorate,city,national_id FROM citizens WHERE id=? LIMIT 1", [user.id]);
   const required = ["gender", "age", "address", "governorate", "city", "national_id"];
