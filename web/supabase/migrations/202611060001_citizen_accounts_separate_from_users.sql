@@ -1,5 +1,20 @@
 BEGIN;
 
+-- Some reset databases have the older app tables but have not created the
+-- device-approval table yet. Create its legacy shape so the migration below
+-- can consistently convert it to citizen_id.
+CREATE TABLE IF NOT EXISTS public.citizen_login_requests (
+  id BIGSERIAL PRIMARY KEY,
+  request_id VARCHAR(64) NOT NULL UNIQUE,
+  user_id BIGINT NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  device_label VARCHAR(120) NOT NULL DEFAULT 'جهاز جديد',
+  status VARCHAR(16) NOT NULL DEFAULT 'pending',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  expires_at TIMESTAMPTZ NOT NULL,
+  CONSTRAINT citizen_login_requests_status_check
+    CHECK (status IN ('pending','approved','rejected','expired','completed'))
+);
+
 -- Preserve the credentials and status already held by the citizen user rows.
 ALTER TABLE public.citizens ADD COLUMN IF NOT EXISTS email VARCHAR(255);
 ALTER TABLE public.citizens ADD COLUMN IF NOT EXISTS password VARCHAR(255);
@@ -62,6 +77,7 @@ ALTER TABLE public.reports
 ALTER TABLE public.citizens ALTER COLUMN password SET NOT NULL;
 ALTER TABLE public.citizens
   ADD CONSTRAINT citizens_status_check CHECK (status IN ('active','blocked'));
+CREATE UNIQUE INDEX IF NOT EXISTS citizens_email_unique_idx ON public.citizens(email);
 ALTER TABLE public.citizens DROP COLUMN IF EXISTS user_id;
 
 ALTER TABLE public.users ALTER COLUMN role SET DEFAULT 'employee';
