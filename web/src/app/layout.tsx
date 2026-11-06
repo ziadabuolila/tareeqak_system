@@ -6,6 +6,7 @@ import NavigationFeedback from "@/components/NavigationFeedback";
 import DemoDataCleanup from "@/components/DemoDataCleanup";
 import ThemeBootstrap from "@/components/ThemeBootstrap";
 import AdminSessionGuard from "@/components/AdminSessionGuard";
+import LiveChangeNotifications from "@/components/LiveChangeNotifications";
 import { LiveRefreshProvider } from "@/lib/live-refresh";
 import { Toaster } from "sonner";
 export const metadata: Metadata = {
@@ -21,6 +22,7 @@ export default function RootLayout({
     <html lang="ar" dir="rtl">
       <body>
         <Toaster dir="rtl" position="top-right" richColors closeButton duration={6500} />
+        <LiveChangeNotifications />
         <ThemeBootstrap />
         <LiveRefreshProvider />
         <AdminSessionGuard />
