@@ -10,7 +10,10 @@ export async function GET(request: Request) {
   const token = await getRequestToken(request);
   const user = await getUserForToken(token);
   if (!user || user.role !== "citizen") return NextResponse.json({ status: false, message: "Unauthenticated.", data: {} }, { status: 401 });
-  return NextResponse.json({ status: true, message: "User retrieved successfully", data: { user: publicUser(user) } });
+  const profile = await row<RowDataPacket>("SELECT name,phone,gender,age,address,governorate,city,national_id FROM citizens WHERE user_id=? LIMIT 1", [user.id]);
+  const required = ["gender", "age", "address", "governorate", "city", "national_id"];
+  const missingFields = required.filter((field) => !String(profile?.[field] ?? "").trim());
+  return NextResponse.json({ status: true, message: "User retrieved successfully", data: { user: publicUser(user), profile, profile_complete: missingFields.length === 0, profile_missing_fields: missingFields } });
 }
 
 export async function PATCH(request: Request) {

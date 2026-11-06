@@ -96,6 +96,17 @@ CREATE TABLE IF NOT EXISTS public.personal_access_tokens (
     ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS public.citizen_login_requests (
+  id BIGSERIAL PRIMARY KEY,
+  request_id VARCHAR(64) NOT NULL UNIQUE,
+  user_id BIGINT NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  device_label VARCHAR(120) NOT NULL DEFAULT 'جهاز جديد',
+  status VARCHAR(16) NOT NULL DEFAULT 'pending',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  expires_at TIMESTAMPTZ NOT NULL,
+  CONSTRAINT citizen_login_requests_status_check CHECK (status IN ('pending','approved','rejected','expired','completed'))
+);
+
 CREATE TABLE IF NOT EXISTS public.reports (
   id BIGSERIAL PRIMARY KEY,
   reference VARCHAR(64) NOT NULL UNIQUE,
@@ -169,6 +180,9 @@ CREATE INDEX IF NOT EXISTS reports_status_created_idx
 CREATE INDEX IF NOT EXISTS reports_user_created_idx
   ON public.reports (user_id, created_at DESC);
 
+CREATE INDEX IF NOT EXISTS citizen_login_requests_user_status_idx
+  ON public.citizen_login_requests (user_id, status, created_at DESC);
+
 CREATE INDEX IF NOT EXISTS reports_created_idx
   ON public.reports (created_at DESC, id DESC);
 
@@ -198,6 +212,7 @@ BEGIN
     'users',
     'citizens',
     'personal_access_tokens',
+    'citizen_login_requests',
     'reports',
     'system_settings'
   ]
@@ -234,6 +249,7 @@ $$;
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.citizens ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.personal_access_tokens ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.citizen_login_requests ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.reports ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.system_settings ENABLE ROW LEVEL SECURITY;
@@ -288,6 +304,7 @@ BEGIN
       public.users,
       public.citizens,
       public.personal_access_tokens,
+      public.citizen_login_requests,
       public.reports,
       public.notifications,
       public.system_settings
@@ -298,6 +315,7 @@ BEGIN
     'users',
     'citizens',
     'personal_access_tokens',
+    'citizen_login_requests',
     'reports',
     'notifications',
     'system_settings'
@@ -425,6 +443,9 @@ COMMENT ON TABLE public.citizens IS
 COMMENT ON TABLE public.personal_access_tokens IS
   'Hashed bearer-token records used by the application API for sessions.';
 
+COMMENT ON TABLE public.citizen_login_requests IS
+  'Short lived approval requests for signing a citizen account into another device.';
+
 COMMENT ON TABLE public.reports IS
   'Citizen-submitted reports, their workflow status, and optional binary image data.';
 
@@ -447,6 +468,7 @@ FROM (
     ('users'),
     ('citizens'),
     ('personal_access_tokens'),
+    ('citizen_login_requests'),
     ('reports'),
     ('notifications'),
     ('system_settings')
@@ -468,6 +490,7 @@ WHERE table_schema = 'public'
     'users',
     'citizens',
     'personal_access_tokens',
+    'citizen_login_requests',
     'reports',
     'notifications',
     'system_settings'
@@ -530,6 +553,14 @@ WITH expected_columns(table_name, column_name) AS (
     ('personal_access_tokens', 'expires_at'),
     ('personal_access_tokens', 'created_at'),
     ('personal_access_tokens', 'updated_at'),
+
+    ('citizen_login_requests', 'id'),
+    ('citizen_login_requests', 'request_id'),
+    ('citizen_login_requests', 'user_id'),
+    ('citizen_login_requests', 'device_label'),
+    ('citizen_login_requests', 'status'),
+    ('citizen_login_requests', 'created_at'),
+    ('citizen_login_requests', 'expires_at'),
 
     ('reports', 'id'),
     ('reports', 'reference'),
@@ -604,6 +635,7 @@ WHERE tc.constraint_schema = 'public'
     'users',
     'citizens',
     'personal_access_tokens',
+    'citizen_login_requests',
     'reports',
     'notifications',
     'system_settings'
@@ -632,6 +664,7 @@ WHERE schemaname = 'public'
     'users',
     'citizens',
     'personal_access_tokens',
+    'citizen_login_requests',
     'reports',
     'notifications',
     'system_settings'
@@ -668,6 +701,7 @@ WHERE ns.nspname = 'public'
     'users',
     'citizens',
     'personal_access_tokens',
+    'citizen_login_requests',
     'reports',
     'notifications',
     'system_settings'
@@ -693,6 +727,7 @@ WHERE schemaname = 'public'
     'users',
     'citizens',
     'personal_access_tokens',
+    'citizen_login_requests',
     'reports',
     'notifications',
     'system_settings'
@@ -728,6 +763,7 @@ required_tables(table_name) AS (
     ('users'),
     ('citizens'),
     ('personal_access_tokens'),
+    ('citizen_login_requests'),
     ('reports'),
     ('notifications'),
     ('system_settings')
@@ -784,6 +820,7 @@ sequence_tables(table_name) AS (
     ('users'),
     ('citizens'),
     ('personal_access_tokens'),
+    ('citizen_login_requests'),
     ('reports'),
     ('notifications')
 ),

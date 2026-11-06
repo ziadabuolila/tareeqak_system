@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
+import { randomUUID } from "node:crypto";
 import { createToken, publicUser, type AuthenticatedUser, verifyPassword } from "@/lib/auth";
-import { assertDatabaseConfigured, row } from "@/lib/database";
+import { assertDatabaseConfigured, execute, row } from "@/lib/database";
 import type { RowDataPacket } from "@/lib/database";
 
 export const runtime = "nodejs";
@@ -21,6 +22,8 @@ export async function POST(request: Request) {
   const input = body as Record<string, unknown> | null;
   const phone = typeof input?.phone === "string" ? input.phone.trim() : "";
   const password = typeof input?.password === "string" ? input.password : "";
+  const requiresApproval = input?.requires_approval === true;
+  const deviceLabel = typeof input?.device_label === "string" ? input.device_label.trim().slice(0, 120) : "جهاز جديد";
   const errors: Record<string, string[]> = {};
 
   if (!phone) errors.phone = ["The phone field is required."];
@@ -32,6 +35,17 @@ export async function POST(request: Request) {
   const user = await row<AuthenticatedUser & RowDataPacket>("SELECT * FROM users WHERE phone = ? AND role = 'citizen' AND status = 'active' LIMIT 1", [phone]);
   if (!user || !(await verifyPassword(password, user.password))) {
     return failure("Invalid phone number or password.", 401);
+  }
+
+  if (requiresApproval) {
+    const activeDevices = await row<{ total: number } & RowDataPacket>("SELECT COUNT(*) AS total FROM personal_access_tokens WHERE tokenable_id=? AND name <> 'admin-web' AND (expires_at IS NULL OR expires_at > CURRENT_TIMESTAMP)", [user.id]);
+    if (Number(activeDevices?.total ?? 0) > 0) {
+      const requestId = randomUUID();
+      await execute("UPDATE citizen_login_requests SET status='expired' WHERE user_id=? AND status='pending'", [user.id]);
+      await execute(`INSERT INTO citizen_login_requests(request_id,user_id,device_label,status,created_at,expires_at)
+        VALUES(?,?,?,'pending',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP + INTERVAL '5 minutes')`, [requestId, user.id, deviceLabel || "جهاز جديد"]);
+      return NextResponse.json({ status: false, message: "يرجى انتظار موافقة صاحب الحساب.", data: { request_id: requestId, state: "pending", check_after_seconds: 3, expires_in_seconds: 300 } }, { status: 202 });
+    }
   }
 
   const token = await createToken(user.id);
