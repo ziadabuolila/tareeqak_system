@@ -50,7 +50,7 @@ export function useAdminNoticeCount() {
       finally { inFlight = false; }
     };
     void refresh();
-    const timer = window.setInterval(() => { void refresh(); }, 10_000);
+    const timer = window.setInterval(() => { void refresh(); }, 5_000);
     return () => { window.clearInterval(timer); window.removeEventListener("pointerdown", unlockAudio); };
   }, []);
   return count;

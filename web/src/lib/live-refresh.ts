@@ -16,7 +16,7 @@ export function LiveRefreshProvider() {
   useEffect(() => {
     const timer = window.setInterval(() => {
       if (!document.hidden) window.dispatchEvent(new Event(refreshEvent));
-    }, 10_000);
+    }, 5_000);
     return () => window.clearInterval(timer);
   }, []);
   return null;

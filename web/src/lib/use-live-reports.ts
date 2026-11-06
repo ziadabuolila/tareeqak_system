@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { adminRequest, ReportRow } from "@/lib/admin-api";
+import { useLiveRefresh } from "@/lib/live-refresh";
 
 export function useLiveReports() {
   const [reports, setReports] = useState<ReportRow[]>([]);
@@ -26,18 +27,15 @@ export function useLiveReports() {
 
   useEffect(() => {
     void refresh();
-    const interval = window.setInterval(() => {
-      if (!document.hidden) void refresh();
-    }, 10_000);
     const refreshWhenVisible = () => { if (!document.hidden) void refresh(); };
     document.addEventListener("visibilitychange", refreshWhenVisible);
     window.addEventListener("focus", refreshWhenVisible);
     return () => {
-      window.clearInterval(interval);
       document.removeEventListener("visibilitychange", refreshWhenVisible);
       window.removeEventListener("focus", refreshWhenVisible);
     };
   }, [refresh]);
+  useLiveRefresh(refresh);
 
   return { reports, setReports, loading, error, setError, refresh };
 }
