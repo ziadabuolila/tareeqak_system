@@ -66,8 +66,7 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ message: "أدخل اسمًا صحيحًا ورقم هاتف مصريًا مكوّنًا من 11 رقمًا." }, { status: 422 });
   }
 
-  const duplicate = await row<RowDataPacket>(`SELECT id FROM users WHERE phone=?
-    UNION SELECT id FROM citizens WHERE phone=? AND id<>? LIMIT 1`, [phone, phone, user.id]);
+  const duplicate = await row<RowDataPacket>("SELECT id FROM citizens WHERE phone=? AND id<>? LIMIT 1", [phone, user.id]);
   if (duplicate) {
     return NextResponse.json({ message: "رقم الهاتف مستخدم بالفعل." }, { status: 409 });
   }

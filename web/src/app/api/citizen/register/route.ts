@@ -31,7 +31,7 @@ export async function POST(request: Request) {
   else if (name.length > 255) errors.name = ["The name field must not be greater than 255 characters."];
   if (!phone) errors.phone = ["The phone field is required."];
   else if (phone.length > 255) errors.phone = ["The phone field must not be greater than 255 characters."];
-  else if ((await row<RowDataPacket>("SELECT 1 FROM users WHERE phone=? UNION SELECT 1 FROM citizens WHERE phone=? LIMIT 1", [phone, phone]))) errors.phone = ["The phone has already been taken."];
+  else if ((await row<RowDataPacket>("SELECT 1 FROM citizens WHERE phone=? LIMIT 1", [phone]))) errors.phone = ["The phone has already been taken."];
   if (!governorate) errors.governorate = ["The governorate field is required."];
   else if (governorate.length > 100) errors.governorate = ["The governorate field must not be greater than 100 characters."];
   if (!city) errors.city = ["The city field is required."];
