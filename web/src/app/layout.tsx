@@ -20,7 +20,7 @@ export default function RootLayout({
   return (
     <html lang="ar" dir="rtl">
       <body>
-        <Toaster dir="rtl" position="top-center" richColors closeButton duration={3500} />
+        <Toaster dir="rtl" position="top-right" richColors closeButton duration={6500} />
         <ThemeBootstrap />
         <LiveRefreshProvider />
         <AdminSessionGuard />
