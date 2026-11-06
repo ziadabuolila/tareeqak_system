@@ -68,11 +68,21 @@ export async function getUserForToken(token: string | null | undefined): Promise
   return record;
 }
 
-export async function getAdminForRequest(request: Request): Promise<AuthenticatedUser | null> {
+export async function getStaffForRequest(request: Request): Promise<AuthenticatedUser | null> {
   const token = await getRequestToken(request);
   const user = await getUserForToken(token);
   if (!user || !["admin", "manager", "employee"].includes(user.role ?? "")) return null;
   return user;
+}
+
+export async function getManagerForRequest(request: Request): Promise<AuthenticatedUser | null> {
+  const user = await getStaffForRequest(request);
+  return user && ["admin", "manager"].includes(user.role ?? "") ? user : null;
+}
+
+export async function getAdminForRequest(request: Request): Promise<AuthenticatedUser | null> {
+  const user = await getStaffForRequest(request);
+  return user?.role === "admin" ? user : null;
 }
 
 export async function getRequestToken(request: Request): Promise<string | null> {

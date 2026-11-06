@@ -51,7 +51,11 @@ try {
   );
   console.log(`Admin account created with id ${result.rows[0].id} for ${email}.`);
 } catch (error) {
-  console.error(error instanceof Error ? error.message : "Unable to create the admin account.");
+  if (error && typeof error === "object" && "code" in error && error.code === "23505") {
+    console.error("An account already uses this email address or phone number.");
+  } else {
+    console.error(error instanceof Error ? error.message : "Unable to create the admin account.");
+  }
   process.exitCode = 1;
 } finally {
   await database.end().catch(() => undefined);

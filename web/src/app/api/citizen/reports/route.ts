@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 import { getRequestToken, getUserForToken } from "@/lib/auth";
-import { database, initializeDatabase, row, rows } from "@/lib/database";
+import { database, assertDatabaseConfigured, row, rows } from "@/lib/database";
 import type { RowDataPacket } from "@/lib/database";
 export const runtime = "nodejs";
 
 export async function GET(request: Request) {
-  await initializeDatabase();
+  await assertDatabaseConfigured();
   const user = await getUserForToken(await getRequestToken(request));
   if (!user || (user as typeof user & { role?: string }).role !== "citizen") return NextResponse.json({ message: "Unauthenticated." }, { status: 401 });
   const reports = await rows<RowDataPacket>(`SELECT id,reference,title,category,description,status,governorate,city,location,image_type,created_at,updated_at
@@ -14,7 +14,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  await initializeDatabase();
+  await assertDatabaseConfigured();
   const user = await getUserForToken(await getRequestToken(request));
   if (!user || (user as typeof user & { role?: string }).role !== "citizen") return NextResponse.json({ message: "Unauthenticated." }, { status: 401 });
   let body: Record<string, unknown>;

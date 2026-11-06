@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
-import { hashPassword, getAdminForRequest, verifyPassword } from "@/lib/auth";
-import { execute, initializeDatabase } from "@/lib/database";
+import { hashPassword, getStaffForRequest, verifyPassword } from "@/lib/auth";
+import { execute, assertDatabaseConfigured } from "@/lib/database";
 export const runtime = "nodejs";
 export async function PATCH(request: Request) {
-  await initializeDatabase();
-  const user = await getAdminForRequest(request);
+  await assertDatabaseConfigured();
+  const user = await getStaffForRequest(request);
   if (!user) return NextResponse.json({ message: "Unauthenticated." }, { status: 401 });
   let body: { currentPassword?: unknown; newPassword?: unknown };
   try { body = await request.json(); } catch { return NextResponse.json({ message: "بيانات كلمة المرور غير صالحة." }, { status: 422 }); }

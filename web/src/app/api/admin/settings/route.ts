@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
 import { getAdminForRequest } from "@/lib/auth";
-import { execute, initializeDatabase, row } from "@/lib/database";
+import { execute, assertDatabaseConfigured, row } from "@/lib/database";
 import type { RowDataPacket } from "@/lib/database";
 
 export const runtime = "nodejs";
 const defaults = { siteName: "طريقك", region: "", email: "", notifications: true, weeklyReport: false };
 
 export async function GET(request: Request) {
-  await initializeDatabase();
+  await assertDatabaseConfigured();
   const user = await getAdminForRequest(request);
   if (!user) return NextResponse.json({ message: "Unauthenticated." }, { status: 401 });
   const setting = await row<{ value: string } & RowDataPacket>("SELECT value FROM system_settings WHERE setting_key='general'");
@@ -15,7 +15,7 @@ export async function GET(request: Request) {
 }
 
 export async function PUT(request: Request) {
-  await initializeDatabase();
+  await assertDatabaseConfigured();
   if (!(await getAdminForRequest(request))) return NextResponse.json({ message: "Unauthenticated." }, { status: 401 });
   let body: typeof defaults;
   try { body = await request.json(); } catch { return NextResponse.json({ message: "بيانات الإعدادات غير صالحة." }, { status: 422 }); }

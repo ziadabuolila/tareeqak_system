@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 import { getAdminForRequest } from "@/lib/auth";
-import { execute, initializeDatabase, rows } from "@/lib/database";
+import { execute, assertDatabaseConfigured, isDuplicateError, rows } from "@/lib/database";
 import type { RowDataPacket } from "@/lib/database";
 
 export const runtime = "nodejs";
 
 export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
-  await initializeDatabase();
+  await assertDatabaseConfigured();
   const admin = await getAdminForRequest(request);
   if (!admin) return NextResponse.json({ message: "Unauthenticated." }, { status: 401 });
   const id = Number((await context.params).id);
@@ -61,7 +61,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
   let result;
   try { result = await execute(`UPDATE users SET ${assignments.join(",")},updated_at=CURRENT_TIMESTAMP WHERE id=?`, values); }
   catch (error) {
-    if (error && typeof error === "object" && "code" in error && error.code === "ER_DUP_ENTRY") return NextResponse.json({ message: "البريد أو الهاتف أو الرقم الوظيفي مستخدم بالفعل." }, { status: 409 });
+    if (isDuplicateError(error)) return NextResponse.json({ message: "البريد أو الهاتف أو الرقم الوظيفي مستخدم بالفعل." }, { status: 409 });
     throw error;
   }
   if (!result.affectedRows) return NextResponse.json({ message: "الحساب غير موجود." }, { status: 404 });
@@ -70,7 +70,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
 }
 
 export async function DELETE(request: Request, context: { params: Promise<{ id: string }> }) {
-  await initializeDatabase();
+  await assertDatabaseConfigured();
   const admin = await getAdminForRequest(request);
   if (!admin) return NextResponse.json({ message: "Unauthenticated." }, { status: 401 });
   const id = Number((await context.params).id);

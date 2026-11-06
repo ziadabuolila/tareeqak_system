@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createToken, publicUser, type AuthenticatedUser, verifyPassword } from "@/lib/auth";
-import { initializeDatabase, row } from "@/lib/database";
+import { assertDatabaseConfigured, row } from "@/lib/database";
 import type { RowDataPacket } from "@/lib/database";
 
 export const runtime = "nodejs";
@@ -8,7 +8,7 @@ export const runtime = "nodejs";
 export async function POST(request: Request) {
   let stage = "database initialization";
   try {
-    await initializeDatabase();
+    await assertDatabaseConfigured();
 
     let body: unknown;
     try {

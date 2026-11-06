@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createToken, hashPassword, publicUser, type AuthenticatedUser } from "@/lib/auth";
-import { database, initializeDatabase, row } from "@/lib/database";
+import { database, assertDatabaseConfigured, isDuplicateError, row } from "@/lib/database";
 import type { RowDataPacket } from "@/lib/database";
 
 export const runtime = "nodejs";
@@ -10,7 +10,7 @@ function failure(message: string, status: number, errors?: Record<string, string
 }
 
 export async function POST(request: Request) {
-  await initializeDatabase();
+  await assertDatabaseConfigured();
   let body: unknown;
   try {
     body = await request.json();
@@ -78,7 +78,7 @@ export async function POST(request: Request) {
       data: { user: publicUser(user), token, token_type: "Bearer" },
     }, { status: 201 });
   } catch (error) {
-    if (error && typeof error === "object" && "code" in error && error.code === "ER_DUP_ENTRY") {
+    if (isDuplicateError(error)) {
       return failure("The given data was invalid.", 422, { phone: ["The phone has already been taken."] });
     }
     return failure("Registration failed", 500);

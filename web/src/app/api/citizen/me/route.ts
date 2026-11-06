@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 import { getRequestToken, getUserForToken, publicUser } from "@/lib/auth";
-import { database, execute, initializeDatabase, row } from "@/lib/database";
+import { database, execute, assertDatabaseConfigured, isDuplicateError, row } from "@/lib/database";
 import type { RowDataPacket } from "@/lib/database";
 
 export const runtime = "nodejs";
 
 export async function GET(request: Request) {
-  await initializeDatabase();
+  await assertDatabaseConfigured();
   const token = await getRequestToken(request);
   const user = await getUserForToken(token);
   if (!user || user.role !== "citizen") return NextResponse.json({ status: false, message: "Unauthenticated.", data: {} }, { status: 401 });
@@ -14,7 +14,7 @@ export async function GET(request: Request) {
 }
 
 export async function PATCH(request: Request) {
-  await initializeDatabase();
+  await assertDatabaseConfigured();
   const token = await getRequestToken(request);
   const user = await getUserForToken(token);
   if (!user || user.role !== "citizen") {
@@ -56,7 +56,7 @@ export async function PATCH(request: Request) {
     await connection.commit();
   } catch (error) {
     await connection.rollback();
-    if (error && typeof error === "object" && "code" in error && error.code === "ER_DUP_ENTRY") {
+    if (isDuplicateError(error)) {
       return NextResponse.json({ message: "رقم الهاتف مستخدم بالفعل." }, { status: 409 });
     }
     return NextResponse.json({ message: "تعذر حفظ بيانات الحساب." }, { status: 500 });
@@ -69,7 +69,7 @@ export async function PATCH(request: Request) {
 }
 
 export async function DELETE(request: Request) {
-  await initializeDatabase();
+  await assertDatabaseConfigured();
   const token = await getRequestToken(request);
   const user = await getUserForToken(token);
   if (!user || user.role !== "citizen" || !token) return NextResponse.json({ status: false, message: "Unauthenticated.", data: {} }, { status: 401 });

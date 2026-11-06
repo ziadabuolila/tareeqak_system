@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
-import { getAdminForRequest } from "@/lib/auth";
-import { execute, initializeDatabase, row } from "@/lib/database";
+import { getManagerForRequest, getStaffForRequest } from "@/lib/auth";
+import { execute, assertDatabaseConfigured, row } from "@/lib/database";
 import type { RowDataPacket } from "@/lib/database";
 
 export const runtime = "nodejs";
 
 export async function GET(request: Request, context: { params: Promise<{ id: string }> }) {
-  await initializeDatabase();
-  if (!(await getAdminForRequest(request))) return NextResponse.json({ message: "Unauthenticated." }, { status: 401 });
+  await assertDatabaseConfigured();
+  if (!(await getStaffForRequest(request))) return NextResponse.json({ message: "Unauthenticated." }, { status: 401 });
   const id = Number((await context.params).id);
   if (!Number.isSafeInteger(id)) return NextResponse.json({ message: "معرّف البلاغ غير صالح." }, { status: 422 });
   const report = await row<Record<string, unknown> & RowDataPacket>(`SELECT reports.*,users.name AS user_name,users.phone AS user_phone FROM reports
@@ -19,8 +19,8 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
 }
 
 export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
-  await initializeDatabase();
-  if (!(await getAdminForRequest(request))) return NextResponse.json({ message: "Unauthenticated." }, { status: 401 });
+  await assertDatabaseConfigured();
+  if (!(await getManagerForRequest(request))) return NextResponse.json({ message: "Unauthenticated." }, { status: 401 });
   const { id: rawId } = await context.params;
   const id = Number(rawId);
   let body: { status?: unknown };

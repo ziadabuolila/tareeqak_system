@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 import { hashPassword, getAdminForRequest } from "@/lib/auth";
-import { execute, initializeDatabase, rows } from "@/lib/database";
+import { execute, assertDatabaseConfigured, isDuplicateError, rows } from "@/lib/database";
 import type { RowDataPacket } from "@/lib/database";
 
 export const runtime = "nodejs";
 
 export async function GET(request: Request) {
-  await initializeDatabase();
+  await assertDatabaseConfigured();
   if (!(await getAdminForRequest(request))) return NextResponse.json({ message: "Unauthenticated." }, { status: 401 });
   const citizens = await rows<RowDataPacket>(`SELECT users.id,users.name,users.email,users.phone,users.status,citizens.city,citizens.governorate,
     (SELECT COUNT(*) FROM reports WHERE reports.user_id=users.id) AS reports
@@ -22,7 +22,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  await initializeDatabase();
+  await assertDatabaseConfigured();
   if (!(await getAdminForRequest(request))) return NextResponse.json({ message: "Unauthenticated." }, { status: 401 });
   let body: Record<string, unknown>;
   try { body = await request.json(); } catch { return NextResponse.json({ message: "بيانات الحساب غير صالحة." }, { status: 422 }); }
@@ -54,7 +54,7 @@ export async function POST(request: Request) {
     const employee = (await rows<RowDataPacket>("SELECT id,name,email,phone,role,status,employee_number,job_title,department,employment_type,hire_date,birth_date,gender,national_id,address,emergency_contact_name,emergency_contact_phone,salary,notes,created_at FROM users WHERE id=?", [result.insertId]))[0];
     return NextResponse.json({ status: true, data: { employee } }, { status: 201 });
   } catch (error) {
-    if (error && typeof error === "object" && "code" in error && error.code === "ER_DUP_ENTRY") return NextResponse.json({ message: "البريد أو الهاتف مستخدم بالفعل." }, { status: 409 });
+    if (isDuplicateError(error)) return NextResponse.json({ message: "البريد أو الهاتف مستخدم بالفعل." }, { status: 409 });
     return NextResponse.json({ message: "تعذر إنشاء الحساب." }, { status: 500 });
   }
 }

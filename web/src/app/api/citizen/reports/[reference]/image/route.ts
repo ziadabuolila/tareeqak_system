@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 import { getRequestToken, getUserForToken } from "@/lib/auth";
-import { initializeDatabase, row } from "@/lib/database";
+import { assertDatabaseConfigured, row } from "@/lib/database";
 import type { RowDataPacket } from "@/lib/database";
 
 export const runtime = "nodejs";
 
 export async function GET(request: Request, context: { params: Promise<{ reference: string }> }) {
-  await initializeDatabase();
+  await assertDatabaseConfigured();
   const user = await getUserForToken(await getRequestToken(request));
   if (!user || user.role !== "citizen") {
     return NextResponse.json({ message: "Unauthenticated." }, { status: 401 });
