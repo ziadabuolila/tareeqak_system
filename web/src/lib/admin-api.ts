@@ -86,7 +86,9 @@ function announceLiveChanges(path: string, result: unknown) {
     description = "تم تحديث اسم أو بريد الحساب من النظام.";
   }
 
-  toast(`تغيير في ${pageName}`, { description, duration: 6500, id: `live-change-${key}` });
+  window.dispatchEvent(new CustomEvent("tareeqak:live-change", {
+    detail: { id: `${key}-${Date.now()}`, page: pageName, description },
+  }));
 }
 
 export function adminRequest<T>(path: string, options: RequestInit = {}) {

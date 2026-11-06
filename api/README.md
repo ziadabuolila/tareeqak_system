@@ -11,6 +11,7 @@ Citizen report submissions may include numeric `latitude` and `longitude` fields
 - `POST /api/admin/login` with administrator `email` and `password` for the web dashboard.
 - `POST /api/citizen/register` with `name`, `phone`, `governorate`, `city`, `password`, and `password_confirmation`. Registration creates the credential and profile only in `citizens`; it does not create a row in the staff `users` table or an authenticated session. Phone numbers are unique within each account table, so a citizen may use the same number as an employee account.
 - `POST /api/citizen/login` with `phone`, `password`, and (for current mobile apps) a persistent installation `device_id` plus `requires_approval: true`.
+- Citizen login returns HTTP 404 with `هذا الحساب غير موجود. ادخل اعمل إنشاء حساب جديد وحاول مرة أخرى.` when the phone is not registered in `citizens`, HTTP 403 with `حسابك مغلق...` when that citizen is blocked, and HTTP 401 with `كلمة المرور غير صحيحة.` for an active account with a wrong password. Staff accounts in `users` are not considered citizen accounts, even if they use the same phone.
 - `GET /api/citizen/me` with `Authorization: Bearer <token>`.
 - `DELETE /api/citizen/me` with `Authorization: Bearer <token>` to revoke the current token.
 

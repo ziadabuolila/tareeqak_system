@@ -36,9 +36,17 @@ export async function POST(request: Request) {
   if (suppliedDeviceId && !deviceId) errors.device_id = ["The device identifier is invalid."];
   if (Object.keys(errors).length) return failure("The given data was invalid.", 422, errors);
 
-  const user = await row<AuthenticatedUser & RowDataPacket>("SELECT id,name,email,phone,password,status,created_at,updated_at,'citizen' AS role FROM citizens WHERE phone = ? AND status = 'active' LIMIT 1", [phone]);
-  if (!user || !(await verifyPassword(password, user.password))) {
-    return failure("Invalid phone number or password.", 401);
+  // Citizen login is intentionally scoped to citizens; a staff account with
+  // the same phone must not be treated as a citizen account.
+  const user = await row<AuthenticatedUser & RowDataPacket>("SELECT id,name,email,phone,password,status,created_at,updated_at,'citizen' AS role FROM citizens WHERE phone = ? LIMIT 1", [phone]);
+  if (!user) {
+    return failure("هذا الحساب غير موجود. ادخل اعمل إنشاء حساب جديد وحاول مرة أخرى.", 404);
+  }
+  if (user.status !== "active") {
+    return failure("حسابك مغلق. يرجى التواصل مع إدارة النظام لتفعيل الحساب.", 403);
+  }
+  if (!(await verifyPassword(password, user.password))) {
+    return failure("كلمة المرور غير صحيحة.", 401);
   }
 
   const connection = await database.getConnection();
@@ -48,7 +56,7 @@ export async function POST(request: Request) {
       "SELECT primary_device_id FROM citizens WHERE id=? AND status='active' FOR UPDATE", [user.id]);
     if (!locked.rows[0]) {
       await connection.rollback();
-      return failure("Invalid phone number or password.", 401);
+      return failure("حسابك مغلق. يرجى التواصل مع إدارة النظام لتفعيل الحساب.", 403);
     }
     const primaryDeviceId = locked.rows[0].primary_device_id?.toLowerCase() ?? "";
     const active = await connection.execute<{ total: number; legacy: number } & RowDataPacket>(`SELECT COUNT(*) AS total,
