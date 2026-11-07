@@ -149,7 +149,8 @@ export const statusLabel: Record<ReportRow["status"], string> = {
 
 export function reportLocationLabel(value: string | null | undefined) {
   const location = value?.trim() ?? "";
+  const readable = location.replace(/\s*\|\s*GPS\s*:\s*-?\d{1,2}(?:\.\d+)?\s*[,،]\s*-?\d{1,3}(?:\.\d+)?\s*$/i, "").trim();
+  if (readable) return readable;
   const match = location.match(/^(-?\d{1,2}(?:\.\d+)?)\s*[,،]\s*(-?\d{1,3}(?:\.\d+)?)$/);
-  if (!match) return location || "—";
-  return `GPS · ${Number(match[1]).toFixed(5)}، ${Number(match[2]).toFixed(5)}`;
+  return match ? `GPS · ${Number(match[1]).toFixed(5)}، ${Number(match[2]).toFixed(5)}` : location || "—";
 }

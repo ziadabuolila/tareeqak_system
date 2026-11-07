@@ -21,7 +21,9 @@ type LocatedReport = ReportRow & { coordinates: Coordinates };
 const statusColor: Record<ReportRow["status"], string> = { pending: "#e9a23b", in_progress: "#4788c7", resolved: "#3a9b69", rejected: "#d45f5f" };
 
 function getCoordinates(location: string): Coordinates | null {
-  const match = location.trim().match(/^\s*(-?\d{1,2}(?:\.\d+)?)\s*[,،]\s*(-?\d{1,3}(?:\.\d+)?)\s*$/);
+  const value = location.trim();
+  const embedded = value.match(/GPS\s*:\s*(-?\d{1,2}(?:\.\d+)?)\s*[,،]\s*(-?\d{1,3}(?:\.\d+)?)/i);
+  const match = embedded ?? value.match(/^\s*(-?\d{1,2}(?:\.\d+)?)\s*[,،]\s*(-?\d{1,3}(?:\.\d+)?)\s*$/);
   if (!match) return null;
   const latitude = Number(match[1]);
   const longitude = Number(match[2]);
