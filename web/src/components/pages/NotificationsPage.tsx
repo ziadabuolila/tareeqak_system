@@ -6,7 +6,7 @@ import { useLiveRefresh } from "@/lib/live-refresh";
 function formatTime(value:string){const date=new Date(value.replace(" ","T")+"Z");return Number.isNaN(date.valueOf())?value:new Intl.DateTimeFormat("ar-EG",{dateStyle:"medium",timeStyle:"short"}).format(date);}
 export default function NotificationsPage(){
   const [items,setItems]=useState<NoticeRow[]>([]);const [loading,setLoading]=useState(true);const [error,setError]=useState("");
-  async function load(silent=false){if(!silent)setLoading(true);try{const result=await adminRequest<{data:{notifications:NoticeRow[]}}>("/admin/notifications");setItems(result.data.notifications);setError("");}catch(e){setError(e instanceof Error?e.message:"تعذر تحميل الإشعارات.");}finally{setLoading(false);}}
+  async function load(silent=false){if(!silent)setLoading(true);try{const result=await adminRequest<{data:{notifications:NoticeRow[]}}>("/admin/notifications");setItems(result.data.notifications);setError("");}catch(e){setError(e instanceof Error?e.message:"ما قدرناش نحمّل الإشعارات دلوقتي.");}finally{setLoading(false);}}
   useEffect(()=>{void load();},[]);
   useLiveRefresh(()=>load(true));
   async function markAll(){try{await adminRequest("/admin/notifications",{method:"PATCH"});setItems((current)=>current.map((n)=>({...n,read:1})));}catch(e){setError(e instanceof Error?e.message:"تعذر تحديث الإشعارات.");}}

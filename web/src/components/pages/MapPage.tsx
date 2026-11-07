@@ -147,7 +147,7 @@ export default function MapPage() {
       <div className="panel-head map-workspace-head"><div><h3>خريطة مواقع البلاغات</h3><p>حرّك الخريطة أو كبّرها، واضغط على العلامة لعرض تفاصيل البلاغ.</p></div><span className="map-coverage"><i /> {loading ? <InlineNumberLoader label="جارٍ تحميل عدد المواقع" /> : `${visibleLocated.length} موقع ظاهر`}</span></div>
       <div className="map-layout map-layout-real">
         <div className="map-visual map-visual-real" ref={mapElement} aria-label="خريطة تفاعلية لمواقع البلاغات" role="application">
-          {!loading && !located.length && <div className="map-empty-overlay"><span><MapPinned size={23} /></span><b>لا توجد إحداثيات GPS بعد</b><small>عند إرسال بلاغ باستخدام تحديد الموقع، سيظهر هنا مباشرة.</small></div>}
+          {!loading && !located.length && <div className="map-empty-overlay"><span><MapPinned size={23} /></span><b>لسه مفيش مواقع محددة للبلاغات</b><small>لما يتبعت بلاغ بموقعه، هتلاقيه هنا.</small></div>}
           <div className="map-zoom-hint"><LocateFixed size={14} /> عجلة الفأرة للتكبير والتحريك للسحب</div>
         </div>
         <aside className="map-side map-report-side">
@@ -157,8 +157,8 @@ export default function MapPage() {
           <div className="map-report-list">{loading ? <div className="empty-state">جارٍ تحميل البلاغات...</div> : filtered.length ? filtered.map((report) => {
             const hasCoordinates = Boolean(getCoordinates(report.location));
             return <button type="button" className={`map-list-report ${selected === report.id ? "selected" : ""}`} key={report.id} onClick={() => focusReport(report)}><span className={`map-list-pin ${report.status}`}><MapPin size={16} /></span><span className="map-list-copy"><b>{report.title}</b><small>{report.reference} · {report.city || report.governorate || (hasCoordinates ? "موقع GPS" : "موقع غير محدد")}</small><small>{reportLocationLabel(report.location)}</small></span><span className={`map-list-state ${report.status}`}>{statusLabel[report.status]}</span></button>;
-          }) : <div className="empty-state">لا توجد بلاغات تطابق البحث.</div>}</div>
-          <div className="map-side-footnote">{loading ? <InlineNumberLoader label="جارٍ تحميل المواقع" /> : rows.length - pinnedCount ? `${rows.length - pinnedCount} بلاغ بموقع نصّي دون إحداثيات؛ سيظهر على الخريطة بعد تحديد موقعه من التطبيق.` : "كل البلاغات المسجلة لها مواقع GPS."}</div>
+          }) : <div className="empty-state">مفيش بلاغات مطابقة للبحث.</div>}</div>
+          <div className="map-side-footnote">{loading ? <InlineNumberLoader label="جارٍ تحميل المواقع" /> : rows.length - pinnedCount ? `${rows.length - pinnedCount} بلاغ من غير إحداثيات؛ هتظهر مواقعها على الخريطة لما تتحدد من التطبيق.` : "مواقع كل البلاغات المسجلة ظاهرة على الخريطة."}</div>
         </aside>
       </div>
     </section>

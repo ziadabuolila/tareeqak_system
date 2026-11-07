@@ -16,7 +16,7 @@ export default function AnalyticsPage() {
   const loadUsers = useCallback(() => {
     adminRequest<{ data: { citizens: UserRow[] } }>("/admin/users")
       .then((userResult) => { setUsers(userResult.data.citizens); })
-      .catch((cause: unknown) => setError(cause instanceof Error ? cause.message : "تعذر تحميل الإحصائيات."))
+      .catch((cause: unknown) => setError(cause instanceof Error ? cause.message : "ما قدرناش نحمّل الإحصائيات دلوقتي."))
       .finally(() => setLoading(false));
   }, []);
   useEffect(() => { void loadUsers(); }, [loadUsers]);

@@ -33,7 +33,7 @@ const nav = [
     icon: ChartNoAxesCombined,
   },
   { href: "/notifications", label: "الإشعارات", icon: Bell },
-  { href: "/catalog", label: "بيانات التطبيق", icon: Settings },
+  { href: "/catalog", label: "إدارة المناطق وأنواع البلاغات", icon: Settings },
 ];
 function PageFrame({
   children,
@@ -108,8 +108,8 @@ function PageFrame({
             <ShieldCheck size={18} />
           </span>
           <div>
-            <b>بيئة آمنة</b>
-            <small>لوحة تحكم طريقك</small>
+            <b>لوحة التحكم</b>
+            <small>إدارة البلاغات والحسابات</small>
           </div>
           <span className="online-dot" />
         </div>
@@ -171,7 +171,7 @@ function PageFrame({
                         <b>{name}</b>
                         <small>
                           {localStorage.getItem("tareeqak_admin_email") ||
-                            "البريد غير مسجل"}
+                            "البريد الإلكتروني غير مضاف"}
                         </small>
                       </div>
                     </div>
@@ -203,7 +203,7 @@ function PageFrame({
           <div className="page-heading">
             <div>
               <h1>{title}</h1>
-              <p>تابع وأدر خدمات وبلاغات منصة طريقك بسهولة.</p>
+              <p>من هنا تقدر تتابع البلاغات وتدير حسابات المستخدمين.</p>
             </div>
             <span className="live-label">
               <i /> النظام يعمل
@@ -219,7 +219,7 @@ function PageFrame({
               <LogOut size={24} />
             </div>
             <h2 id="logout-confirm-title">تأكيد تسجيل الخروج</h2>
-            <p>هل أنت متأكد إنك عايز تسجل الخروج من لوحة تحكم طريقك؟</p>
+            <p>تحب تسجّل خروجك من لوحة التحكم؟</p>
             <div className="form-actions">
               <button
                 className="btn btn-light"

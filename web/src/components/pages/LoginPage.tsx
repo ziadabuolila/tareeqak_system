@@ -126,7 +126,7 @@ export default function LoginPage() {
           <div className="login-title">
             <span className="login-eyebrow">أهلاً بعودتك</span>
             <h2>سجّل دخولك إلى حسابك</h2>
-            <p>أدخل بيانات حساب المسؤول للوصول إلى لوحة تحكم طريقك.</p>
+            <p>سجّل دخولك عشان تتابع البلاغات وتدير حسابات المستخدمين.</p>
           </div>
           <form className="login-form" onSubmit={submit} autoComplete={remember ? "on" : "off"}>
             <label>

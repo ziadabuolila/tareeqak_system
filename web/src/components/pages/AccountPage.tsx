@@ -18,7 +18,7 @@ export default function AccountPage() {
     adminRequest<{data:{user:{name:string;email:string|null}}}>("/admin/account").then((result) => {
       setName(result.data.user.name);
       setEmail(result.data.user.email || "");
-    }).catch((cause) => setError(cause instanceof Error ? cause.message : "تعذر تحميل بيانات الحساب."));
+    }).catch((cause) => setError(cause instanceof Error ? cause.message : "ما قدرناش نحمّل بيانات الحساب دلوقتي."));
   }, [dirty]);
   useEffect(() => { void loadAccount(); }, [loadAccount]);
   useLiveRefresh(loadAccount);
