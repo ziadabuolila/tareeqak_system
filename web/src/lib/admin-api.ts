@@ -50,6 +50,7 @@ function announceLiveChanges(path: string, result: unknown) {
   if (previous === undefined || previous === current) return;
 
   const pageName = livePageNames[window.location.pathname] ?? label;
+  let targetUrl = key === "/admin/reports" ? "/reports" : key === "/admin/users" ? "/users" : "/account";
   let description = `تم رصد تغيير جديد في بيانات ${label}.`;
   if (key === "/admin/reports") {
     const oldRows = JSON.parse(previous) as Array<Record<string, unknown>>;
@@ -61,6 +62,8 @@ function announceLiveChanges(path: string, result: unknown) {
       const old = oldById.get(String(row.id));
       return old && old.status !== row.status;
     }).length;
+    const changedReport = rows.find((row) => !oldById.has(String(row.id)) || oldById.get(String(row.id))?.status !== row.status);
+    if (changedReport?.reference) targetUrl = `/reports?reference=${encodeURIComponent(String(changedReport.reference))}`;
     const parts = [];
     if (added) parts.push(`إضافة ${added} بلاغ`);
     if (statusChanges) parts.push(`تحديث حالة ${statusChanges} بلاغ`);
@@ -90,6 +93,10 @@ function announceLiveChanges(path: string, result: unknown) {
     description,
     duration: 6500,
     id: `live-change-${key}`,
+    action: {
+      label: "عرض",
+      onClick: () => window.location.assign(targetUrl),
+    },
   });
 }
 

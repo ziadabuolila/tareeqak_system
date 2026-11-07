@@ -1,5 +1,5 @@
 "use client";
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import { Download, Search, Eye } from "lucide-react";
 import { adminRequest, ReportRow, reportLocationLabel, statusLabel } from "@/lib/admin-api";
@@ -12,6 +12,7 @@ export default function ReportsPage() {
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState("all");
   const [detail, setDetail] = useState<ReportRow | null>(null);
+  const openedReference = useRef("");
   async function update(id: number, status: ReportRow["status"]) {
     try {
       await adminRequest(`/admin/reports/${id}`, { method: "PATCH", body: JSON.stringify({ status }) });
@@ -20,13 +21,22 @@ export default function ReportsPage() {
       setError("");
     } catch (cause) { setError(cause instanceof Error ? cause.message : "تعذر تحديث الحالة."); }
   }
-  async function openDetail(report: ReportRow) {
+  const openDetail = useCallback(async (report: ReportRow) => {
     setDetail(report);
     try {
       const result = await adminRequest<{ data: { report: ReportRow } }>(`/admin/reports/${report.id}`);
       setDetail(result.data.report);
     } catch (cause) { setError(cause instanceof Error ? cause.message : "تعذر تحميل تفاصيل البلاغ."); }
-  }
+  }, [setError]);
+  useEffect(() => {
+    const reference = new URLSearchParams(window.location.search).get("reference") ?? "";
+    if (!reference || openedReference.current === reference) return;
+    const report = rows.find((item) => item.reference === reference);
+    if (!report) return;
+    openedReference.current = reference;
+    window.history.replaceState(null, "", window.location.pathname);
+    void openDetail(report);
+  }, [rows, openDetail]);
   const filtered = useMemo(() => rows.filter((report) => {
     const text = `${report.reference} ${report.title} ${report.city} ${report.location} ${report.user_name ?? ""} ${report.user_phone ?? ""}`.toLowerCase();
     return (filter === "all" || report.status === filter) && text.includes(q.trim().toLowerCase());
