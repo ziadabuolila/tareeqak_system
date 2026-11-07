@@ -8,6 +8,14 @@ Use `http://<computer-ip>:3000/api` as the base URL on a phone connected to the 
 
 Citizen report submissions may include numeric `latitude` and `longitude` fields. When both values are valid, the API keeps the supplied readable place in `location` and appends a `GPS:latitude,longitude` marker to that same value, allowing the admin map to plot it without showing raw coordinates in report details or notifications. Mobile clients should continue sending `city` and `governorate` for the readable area.
 
+## Citizen app catalog
+
+- `GET /api/citizen/catalog?kind=governorate` returns the current governorates.
+- `GET /api/citizen/catalog?kind=center&governorate=القاهرة` returns centers for the selected governorate.
+- `GET /api/citizen/catalog?kind=problem_type` returns report problem types.
+- The catalog is stored in `citizen_catalog` and seeded with the existing Egypt locations and problem types when first requested. The system settings page manages it through authenticated `GET/POST /api/admin/catalog` and `PATCH/DELETE /api/admin/catalog/{id}`. Center entries require a governorate; deleting a governorate also deletes its centers.
+- Mobile clients should load these lists from the API and show a loading indicator while requests are in flight. The API response is `{ status: true, data: { items: [{ id, kind, name, parent_name }] } }`.
+
 - `POST /api/admin/login` with administrator `email` and `password` for the web dashboard.
 - `POST /api/citizen/register` with `name`, `phone`, `governorate`, `city`, `password`, and `password_confirmation`. Registration creates the credential and profile only in `citizens`; it does not create a row in the staff `users` table or an authenticated session. Phone numbers are unique within each account table, so a citizen may use the same number as an employee account.
 - `POST /api/citizen/login` with `phone`, `password`, and (for current mobile apps) a persistent installation `device_id` plus `requires_approval: true`.
