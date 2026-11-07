@@ -2957,6 +2957,19 @@ html[data-theme="dark"] .table-wrap tbody tr:hover { background:#202e26; }
 
 
 .inline-number-loader { display: inline-flex; width: 30px; height: 26px; align-items: center; justify-content: center; vertical-align: middle; color: #63a275; }
+
+.catalog-modal { width: min(100%, 620px); max-height: min(88vh, 820px); overflow: auto; }
+.catalog-form-fields { display: grid; gap: 13px; margin: 18px 0; }
+.catalog-form-fields > label, .catalog-center-input > label { display: grid; gap: 7px; color: var(--ink, #263a2e); font-size: 11px; font-weight: 750; }
+.catalog-form-fields input, .catalog-center-input input { width: 100%; min-height: 43px; padding: 9px 12px; border: 1px solid var(--line, #e5ece7); border-radius: 11px; color: var(--ink, #263a2e); background: var(--surface, #fff); font: inherit; outline: none; }
+.catalog-form-fields input:focus, .catalog-center-input input:focus { border-color: #70a77c; box-shadow: 0 0 0 3px #70a77c22; }
+.catalog-centers-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 5px; color: var(--ink, #263a2e); font-size: 11px; }
+.catalog-center-input { display: grid; grid-template-columns: minmax(0, 1fr) 38px; align-items: end; gap: 8px; }
+.catalog-modal-list { max-height: 48vh; overflow: auto; margin: 17px 0; border: 1px solid var(--line, #e5ece7); border-radius: 13px; }
+.catalog-center-row { display: grid; grid-template-columns: 38px minmax(0, 1fr); align-items: center; gap: 8px; min-height: 45px; padding: 8px 13px; border-bottom: 1px solid var(--line, #edf1ee); color: var(--ink, #263a2e); font-size: 12px; }
+.catalog-center-row:last-child { border-bottom: 0; }
+.catalog-center-row span { display: grid; width: 27px; height: 27px; place-items: center; border-radius: 9px; color: #4b8059; background: #edf6ef; font-size: 10px; font-weight: 800; }
+@media(max-width:700px) { .catalog-modal { padding: 24px 18px; } .catalog-modal .modal-actions { flex-wrap: wrap; } }
 .inline-number-loader svg { animation: inline-number-spin .9s linear infinite; }
 @keyframes inline-number-spin { to { transform: rotate(360deg); } }
 html[data-theme="dark"] .inline-number-loader { color: #a4d2ae; }
