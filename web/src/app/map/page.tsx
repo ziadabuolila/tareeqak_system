@@ -33,6 +33,7 @@ const nav = [
     icon: ChartNoAxesCombined,
   },
   { href: "/notifications", label: "الإشعارات", icon: Bell },
+  { href: "/catalog", label: "بيانات التطبيق", icon: Settings },
 ];
 function PageFrame({
   children,

@@ -2,7 +2,6 @@
 import { useEffect, useState } from "react";
 import { Check, Moon, Sun } from "lucide-react";
 import { toast } from "sonner";
-import CatalogPage from "@/components/pages/CatalogPage";
 
 type Theme = "light" | "dark";
 
@@ -73,7 +72,6 @@ export default function SettingsPage() {
         })}
       </div>
     </section>
-    <div style={{ marginTop: 18 }}><CatalogPage /></div>
     </>
   );
 }
