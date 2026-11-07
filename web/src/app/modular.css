@@ -2975,24 +2975,3 @@ html[data-theme="dark"] .analytics-skeleton-label { background: #35463b; }
 
 .user-tab span, .user-tab.active span { background: transparent; }
 
-/* Dedicated live data notices, visually separate from regular Sonner alerts. */
-.live-change-stack { position: fixed; z-index: 1100; top: 20px; right: 20px; display: grid; gap: 10px; width: min(370px, calc(100vw - 28px)); pointer-events: none; }
-.live-change-card { position: relative; display: flex; align-items: flex-start; gap: 12px; overflow: hidden; padding: 16px 14px 18px; border: 1px solid #b9dfc5; border-inline-start: 4px solid #278451; border-radius: 16px; background: linear-gradient(135deg,#fff 0%,#f2faf4 100%); color: #193a28; box-shadow: 0 18px 55px #0c281b35; animation: live-change-in .42s cubic-bezier(.22,.78,.24,1) both; pointer-events: auto; }
-.live-change-card.is-exiting { animation: live-change-out .34s cubic-bezier(.4,0,.7,.2) both; pointer-events: none; }
-.live-change-icon { display: grid; flex: 0 0 38px; width: 38px; height: 38px; place-items: center; border-radius: 12px; color: #fff; background: linear-gradient(145deg,#39a467,#1d7545); box-shadow: 0 5px 14px #27845140; }
-.live-change-copy { min-width: 0; flex: 1; }
-.live-change-eyebrow { display: flex; align-items: center; gap: 7px; color: #278451; font-size: 10px; font-weight: 800; }
-.live-change-eyebrow i { width: 4px; height: 4px; border-radius: 50%; background: #9ab8a3; }
-.live-change-copy p { margin: 5px 0 0; color: #334c3c; font-size: 12px; font-weight: 700; line-height: 1.7; }
-.live-change-close { display: grid; flex: 0 0 27px; width: 27px; height: 27px; place-items: center; padding: 0; border: 0; border-radius: 8px; background: transparent; color: #73847a; cursor: pointer; }
-.live-change-close:hover { background: #e6f3e9; color: #17643b; }
-.live-change-progress { position: absolute; inset-inline: 0; bottom: 0; height: 3px; transform-origin: right; background: linear-gradient(90deg,#7cc894,#278451); animation: live-change-countdown 8s linear both; }
-@keyframes live-change-in { from { opacity: 0; transform: translateX(42px); } 70% { opacity: 1; } to { opacity: 1; transform: translateX(0); } }
-@keyframes live-change-out { from { opacity: 1; transform: translateX(0); } to { opacity: 0; transform: translateX(42px); } }
-@keyframes live-change-countdown { from { transform: scaleX(1); } to { transform: scaleX(0); } }
-html[data-theme="dark"] .live-change-card { border-color: #365c43; border-inline-start-color: #65bb7c; background: linear-gradient(135deg,#1c2b22,#16251b); color: #e4f2e7; box-shadow: 0 18px 55px #0008; }
-html[data-theme="dark"] .live-change-copy p { color: #d2e2d6; }
-html[data-theme="dark"] .live-change-close { color: #a8b9ad; }
-html[data-theme="dark"] .live-change-close:hover { background: #2b4032; color: #dcefe1; }
-@media(max-width:600px) { .live-change-stack { top: max(12px, env(safe-area-inset-top)); right: 12px; width: calc(100vw - 24px); } }
-@media(prefers-reduced-motion:reduce) { .live-change-card { animation: none; } .live-change-progress { animation: none; } }
