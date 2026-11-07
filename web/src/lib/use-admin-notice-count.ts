@@ -41,8 +41,14 @@ export function useAdminNoticeCount() {
         const newestId = notifications[0]?.id ?? null;
         if (initialized && newestId !== null && newestId > latestId) {
           const latest = notifications[0];
-          toast(latest.title, { description: latest.body, duration: 5000 });
-          playNoticeSound();
+          // New citizen reports already produce a dedicated live-change card.
+          // Keep the persisted notice and badge, but avoid showing a second toast.
+          const hasDedicatedLiveNotice = latest.title === "بلاغ جديد يحتاج للمراجعة"
+            && latest.body.startsWith("تم تسجيل البلاغ ");
+          if (!hasDedicatedLiveNotice) {
+            toast(latest.title, { description: latest.body, duration: 5000 });
+            playNoticeSound();
+          }
         }
         if (newestId !== null) latestId = Math.max(latestId, newestId);
         initialized = true;
