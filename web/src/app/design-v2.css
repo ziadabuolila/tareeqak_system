@@ -434,20 +434,6 @@ html body .page-content { padding-top: 22px; }
 @media (max-width: 1100px) { .cc-grid { grid-template-columns: 1fr; } .cc-kpis { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 640px) { .cc-hero { flex-direction: column-reverse; align-items: flex-start; padding: 24px; } .cc-hero h2 { font-size: 25px; } .cc-ring { width: 130px; height: 130px; } .cc-spark { display: none; } }
 
-/* Full system availability state */
-.service-outage-overlay { position: fixed; inset: 0; z-index: 10000; display: grid; place-items: center; padding: 24px; background: rgba(5, 23, 27, .76); backdrop-filter: blur(12px); }
-.service-outage-card { width: min(100%, 430px); display: flex; flex-direction: column; align-items: center; padding: 36px 30px 30px; border: 1px solid var(--v2-line, #dce7e9); border-radius: 26px; background: var(--v2-surface, #fff); box-shadow: 0 28px 90px rgba(0, 0, 0, .24); color: var(--v2-ink, #16343a); text-align: center; }
-.service-outage-brand { align-self: flex-start; display: inline-flex; align-items: center; gap: 8px; color: var(--v2-primary, #0b6e7f); font-size: 14px; font-weight: 800; }
-.service-outage-icon { display: grid; place-items: center; width: 72px; height: 72px; margin-top: 28px; border-radius: 22px; color: #a9741e; background: #fff4df; }
-.service-outage-icon svg { animation: service-outage-spin 1.3s linear infinite; }
-.service-outage-card h1 { margin: 21px 0 8px; color: var(--v2-ink, #16343a); font-size: 22px; }
-.service-outage-card p { max-width: 330px; margin: 0; color: var(--v2-muted, #6e8185); font-size: 14px; line-height: 1.9; }
-.service-outage-progress { width: 100%; height: 6px; margin-top: 26px; overflow: hidden; border-radius: 99px; background: var(--v2-surface-2, #edf2f3); }
-.service-outage-progress i { display: block; width: 38%; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #0b6e7f, #36a6aa); animation: service-outage-progress 1.6s ease-in-out infinite alternate; }
-.service-outage-card small { margin-top: 15px; color: var(--v2-muted, #6e8185); font-size: 12px; }
-@keyframes service-outage-spin { to { transform: rotate(360deg); } }
-@keyframes service-outage-progress { from { transform: translateX(160%); } to { transform: translateX(-30%); } }
-@media (prefers-reduced-motion: reduce) { .service-outage-icon svg, .service-outage-progress i { animation-duration: 4s; } }
 
 /* ---- 3) صفحة البلاغات: لوحة كانبان ---- */
 .view-toggle { display: inline-flex; background: var(--v2-surface-2); border: 1px solid var(--v2-line); border-radius: 14px; padding: 3px; }
