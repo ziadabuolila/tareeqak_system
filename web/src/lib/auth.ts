@@ -36,11 +36,10 @@ export async function createCitizenToken(citizenId: number, name = "mobile-app")
 
 async function createTokenFor(tokenableType: string, tokenableId: number, name: string): Promise<string> {
   const secret = randomBytes(32).toString("hex");
-  const expiresAt = name === "admin-web" ? "NOW() + INTERVAL '1 hour'" : "NULL";
+  const expiresAt = name === "admin-web" ? "DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 1 HOUR)" : "NULL";
   const result = await execute(`
     INSERT INTO personal_access_tokens (tokenable_type, tokenable_id, name, token, abilities, expires_at)
-    VALUES ($1, $2, $3, $4, $5, ${expiresAt})
-    RETURNING id
+    VALUES (?, ?, ?, ?, ?, ${expiresAt})
   `, [tokenableType, tokenableId, name, createHash("sha256").update(secret).digest("hex"), '["*"]']);
 
   const tokenId = Number(result.insertId);
@@ -83,8 +82,8 @@ export async function getUserForToken(token: string | null | undefined): Promise
   await execute(`UPDATE personal_access_tokens
     SET last_used_at = NOW(),
         updated_at = NOW(),
-        expires_at = CASE WHEN name = 'admin-web' THEN NOW() + INTERVAL '1 hour' ELSE expires_at END
-    WHERE id = $1`, [tokenId]);
+        expires_at = CASE WHEN name = 'admin-web' THEN DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 1 HOUR) ELSE expires_at END
+    WHERE id = ?`, [tokenId]);
   return record;
 }
 

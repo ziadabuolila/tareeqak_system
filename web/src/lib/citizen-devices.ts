@@ -16,8 +16,8 @@ export async function registerCitizenDevice(citizenId: number, deviceId: string,
   if (!citizenDeviceIdPattern.test(deviceId)) return false;
   await execute(`INSERT INTO citizen_devices(citizen_id,device_id,device_label,status,first_seen_at,last_seen_at,created_at,updated_at)
     VALUES(?,?,?,'active',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)
-    ON CONFLICT(citizen_id,device_id) DO UPDATE SET
-      device_label=CASE WHEN citizen_devices.status='active' THEN EXCLUDED.device_label ELSE citizen_devices.device_label END,
+    ON DUPLICATE KEY UPDATE
+      device_label=IF(citizen_devices.status='active',VALUES(device_label),citizen_devices.device_label),
       last_seen_at=CASE WHEN citizen_devices.status='active' THEN CURRENT_TIMESTAMP ELSE citizen_devices.last_seen_at END,
       updated_at=CURRENT_TIMESTAMP`,
   [citizenId, deviceId.toLowerCase(), label.trim().slice(0, 120) || "هاتف محمول"]);

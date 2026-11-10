@@ -22,8 +22,7 @@ export async function PUT(request: Request) {
   const settings = { siteName: String(body.siteName ?? "").trim(), region: String(body.region ?? "").trim(), email: String(body.email ?? "").trim(), notifications: Boolean(body.notifications), weeklyReport: Boolean(body.weeklyReport) };
   if (!settings.siteName || !settings.email || !/^\S+@\S+\.\S+$/.test(settings.email)) return NextResponse.json({ message: "اسم المنصة والبريد الصحيح مطلوبان." }, { status: 422 });
   await execute(`INSERT INTO system_settings(setting_key, value, updated_at)
-    VALUES ('general', $1, NOW())
-    ON CONFLICT (setting_key)
-    DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()`, [JSON.stringify(settings)]);
+    VALUES ('general', ?, CURRENT_TIMESTAMP)
+    ON DUPLICATE KEY UPDATE value = VALUES(value), updated_at = CURRENT_TIMESTAMP`, [JSON.stringify(settings)]);
   return NextResponse.json({ status: true, data: { settings } });
 }

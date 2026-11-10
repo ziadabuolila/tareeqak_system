@@ -49,10 +49,9 @@ export async function POST(request: Request) {
       await connection.beginTransaction();
       const result = await connection.execute(`
         INSERT INTO citizens (name,email,phone,password,governorate,city,status,created_at,updated_at)
-        VALUES ($1,$2,$3,$4,$5,$6,'active',NOW(),NOW())
-        RETURNING id
+        VALUES (?,?,?,?,?,?,'active',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)
       `, [name, null, phone, passwordHash, governorate, city]);
-      citizenId = Number((result.rows?.[0]?.id as number | string | null | undefined) ?? 0);
+      citizenId = Number(result.insertId ?? 0);
       await connection.commit();
     } catch (error) {
       await connection.rollback();

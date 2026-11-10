@@ -48,16 +48,15 @@ export async function POST(request: Request) {
   try {
     await connection.beginTransaction();
     const insertResult = await connection.execute(`INSERT INTO reports(reference,citizen_id,title,category,description,governorate,city,location,image_url,image_data,image_type)
-      VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
-      RETURNING id`, [reference, user.id, category, category, description, governorate, city, location, null, imageData, imageData ? "image/jpeg" : null]);
-    reportId = Number((insertResult.rows?.[0]?.id as number | string | null | undefined) ?? 0);
-    await connection.execute("INSERT INTO notifications(title,body,kind) VALUES($1,$2,$3)", ["بلاغ جديد يحتاج للمراجعة", `تم تسجيل البلاغ ${reference} في ${city || readableLocation}.`, "warning"]);
+      VALUES(?,?,?,?,?,?,?,?,?,?,?)`, [reference, user.id, category, category, description, governorate, city, location, null, imageData, imageData ? "image/jpeg" : null]);
+    reportId = Number(insertResult.insertId ?? 0);
+    await connection.execute("INSERT INTO notifications(title,body,kind) VALUES(?,?,?)", ["بلاغ جديد يحتاج للمراجعة", `تم تسجيل البلاغ ${reference} في ${city || readableLocation}.`, "warning"]);
     const similar = await connection.execute(`SELECT COUNT(*) AS total FROM reports
-      WHERE category=$1 AND COALESCE(NULLIF(city,''), NULLIF(SPLIT_PART(location,' | GPS:',1),''), NULLIF(governorate,'')) =
-        COALESCE(NULLIF($2,''), NULLIF($3,''), NULLIF($4,'')) AND status IN ('pending','in_progress')`, [category, city, readableLocation, governorate]);
+      WHERE category=? AND COALESCE(NULLIF(city,''), NULLIF(SUBSTRING_INDEX(location,' | GPS:',1),''), NULLIF(governorate,'')) =
+        COALESCE(NULLIF(?,''), NULLIF(?,''), NULLIF(?,'')) AND status IN ('pending','in_progress')`, [category, city, readableLocation, governorate]);
     const similarCount = Number(similar.rows?.[0]?.total ?? 0);
     if (similarCount >= 5 && similarCount % 5 === 0) {
-      await connection.execute("INSERT INTO notifications(title,body,kind) VALUES($1,$2,$3)", ["بلاغات متكررة — حالة خطرة", `وصل عدد البلاغات المفتوحة عن «${category}» في ${city || readableLocation || governorate} إلى ${similarCount} بلاغات.`, "warning"]);
+      await connection.execute("INSERT INTO notifications(title,body,kind) VALUES(?,?,?)", ["بلاغات متكررة — حالة خطرة", `وصل عدد البلاغات المفتوحة عن «${category}» في ${city || readableLocation || governorate} إلى ${similarCount} بلاغات.`, "warning"]);
     }
     await connection.commit();
   } catch (error) {

@@ -1,6 +1,6 @@
 # Next.js API
 
-The backend runs inside the Next.js server and stores data in PostgreSQL. Configure the server-side `DATABASE_URL` using `web/.env.example` as a guide.
+The backend runs inside the Next.js server and stores data in MySQL/MariaDB. Configure the server-side connection using `web/.env.example` as a guide, then import `web/mysql-schema.sql` into the selected database with phpMyAdmin.
 
 Use `http://<computer-ip>:3000/api` as the base URL on a phone connected to the same network; the `/api` prefix stays the same as the Laravel service.
 
@@ -36,9 +36,9 @@ Citizen report submissions may include numeric `latitude` and `longitude` fields
 - The requesting device polls `GET /api/citizen/login-requests/{request_id}`. Approval returns a bearer token for that phone without revoking other mobile sessions; rejection returns `state: "rejected"`.
 - The owner phone manages devices through `GET /api/citizen/devices` and blocks or unblocks them with `PATCH /api/citizen/devices/{device_id}` and `{ "action": "block" }` / `{ "action": "unblock" }`. Blocking revokes that phone's token and prevents future logins until unblocked. The primary owner phone cannot be blocked from its own session.
 
-Citizen credentials and staff accounts are separate: citizen tokens use the `App\Models\Citizen` token type, and citizen reports and login approvals reference `citizens.id`. For an existing database, apply `web/supabase/migrations/202611060001_citizen_accounts_separate_from_users.sql` once to move existing citizen credentials, tokens, reports, and pending approvals onto the citizen records and remove their duplicate `users` rows, then apply `web/supabase/migrations/202611060002_primary_citizen_device.sql` for primary-device recognition. For a new database, use the updated `web/supabase/schema.sql` instead.
+Citizen credentials and staff accounts are separate: citizen tokens use the `App\Models\Citizen` token type, and citizen reports and login approvals reference `citizens.id`. The MySQL schema includes the citizen account and primary-device tables; import `web/mysql-schema.sql` for a new database.
 
-The device approval and blocking flow requires `citizen_devices`. For an existing database, apply `web/supabase/migrations/202611090001_citizen_device_management.sql` once after the citizen-account and primary-device migrations. New databases should use the updated `web/supabase/schema.sql`.
+The device approval and blocking flow requires `citizen_devices`, which is included in `web/mysql-schema.sql`.
 
 Administrator accounts are created locally with `npm run admin:create`; citizen accounts cannot access the admin login. Successful login responses keep the Laravel shape: `{ status, message, data: { user, token, token_type } }`. Registration returns the new citizen profile without a token so the app must sign in explicitly. Passwords are hashed with bcrypt and only token hashes are stored.
 

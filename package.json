@@ -17,8 +17,5 @@
   },
   "overrides": {
     "postcss": "^8.5.32"
-  },
-  "devDependencies": {
-    "@types/pg": "^8.23.1"
   }
 }

@@ -26,10 +26,12 @@ export async function PATCH(request: Request, context: Params) {
   const connection = await database.getConnection();
   try {
     await connection.beginTransaction();
-    const changed = await connection.execute<{ device_id: string; status: string } & RowDataPacket>(
+    await connection.execute(
       `UPDATE citizen_devices SET status=?,blocked_at=${body.action === "block" ? "CURRENT_TIMESTAMP" : "NULL"},
-        updated_at=CURRENT_TIMESTAMP WHERE citizen_id=? AND device_id=? RETURNING device_id,status`,
+        updated_at=CURRENT_TIMESTAMP WHERE citizen_id=? AND device_id=?`,
       [status, actor.id, deviceId]);
+    const changed = await connection.execute<{ device_id: string; status: string } & RowDataPacket>(
+      "SELECT device_id,status FROM citizen_devices WHERE citizen_id=? AND device_id=?", [actor.id, deviceId]);
     if (!changed.rows[0]) {
       await connection.rollback();
       return NextResponse.json({ message: "الهاتف مش مسجل على الحساب." }, { status: 404 });

@@ -26,9 +26,7 @@ export async function PATCH(request: Request, context: Params) {
     const found = await connection.execute<{ citizen_id: number; status: string; expires_at: string; device_id: string | null } & RowDataPacket>(
       "SELECT citizen_id,status,expires_at,device_id FROM citizen_login_requests WHERE request_id=? FOR UPDATE", [(await context.params).requestId]);
     const loginRequest = found.rows[0];
-    // PostgreSQL returns BIGINT values as strings by default. Normalize both
-    // IDs before comparing so a valid citizen cannot lose their own request
-    // to a string-versus-number mismatch.
+    // Normalize database ID values before comparing them.
     if (!loginRequest || Number(loginRequest.citizen_id) !== Number(actor.id)) {
       await connection.rollback();
       return NextResponse.json({ message: "طلب تسجيل الدخول غير موجود." }, { status: 404 });
@@ -99,13 +97,13 @@ export async function GET(_request: Request, context: Params) {
     const tokenHash = createHash("sha256").update(secret).digest("hex");
     const tokenName = deviceId ? `mobile-app:${deviceId}` : "mobile-app";
     const created = await connection.execute<{ id: number } & RowDataPacket>(`INSERT INTO personal_access_tokens(tokenable_type,tokenable_id,name,token,abilities,created_at,updated_at)
-      VALUES('App\\Models\\Citizen',?,?,?,'["*"]',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP) RETURNING id`, [user.id, tokenName, tokenHash]);
-    const token = `${created.rows[0].id}|${secret}`;
+      VALUES('App\\Models\\Citizen',?,?,?,'["*"]',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)`, [user.id, tokenName, tokenHash]);
+    const token = `${created.insertId}|${secret}`;
     if (deviceId) {
       await connection.execute(`INSERT INTO citizen_devices(citizen_id,device_id,device_label,status,first_seen_at,last_seen_at,created_at,updated_at)
         VALUES(?,?,?,'active',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)
-        ON CONFLICT(citizen_id,device_id) DO UPDATE SET device_label=EXCLUDED.device_label,
-          last_seen_at=CURRENT_TIMESTAMP,updated_at=CURRENT_TIMESTAMP WHERE citizen_devices.status='active'`,
+        ON DUPLICATE KEY UPDATE device_label=IF(citizen_devices.status='active',VALUES(device_label),citizen_devices.device_label),
+          last_seen_at=IF(citizen_devices.status='active',CURRENT_TIMESTAMP,citizen_devices.last_seen_at),updated_at=CURRENT_TIMESTAMP`,
       [user.id, deviceId, loginRequest.device_label || "هاتف محمول"]);
     }
     await connection.execute("UPDATE citizen_login_requests SET status='completed' WHERE request_id=?", [requestId]);

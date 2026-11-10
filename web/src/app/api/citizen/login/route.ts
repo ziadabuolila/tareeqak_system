@@ -69,7 +69,7 @@ export async function POST(request: Request) {
       }
     }
     const active = await connection.execute<{ total: number; legacy: number } & RowDataPacket>(`SELECT COUNT(*) AS total,
-      COUNT(*) FILTER (WHERE name='mobile-app') AS legacy FROM personal_access_tokens
+      SUM(name='mobile-app') AS legacy FROM personal_access_tokens
       WHERE tokenable_id=? AND tokenable_type='App\\Models\\Citizen' AND name <> 'admin-web'
         AND (expires_at IS NULL OR expires_at > CURRENT_TIMESTAMP)`, [user.id]);
     const activeDeviceCount = Number(active.rows[0]?.total ?? 0);
@@ -81,7 +81,7 @@ export async function POST(request: Request) {
       const requestId = randomUUID();
       await connection.execute("UPDATE citizen_login_requests SET status='expired' WHERE citizen_id=? AND status='pending'", [user.id]);
       await connection.execute(`INSERT INTO citizen_login_requests(request_id,citizen_id,device_label,device_id,status,created_at,expires_at)
-        VALUES(?,?,?,?, 'pending',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP + INTERVAL '5 minutes')`,
+        VALUES(?,?,?,?, 'pending',CURRENT_TIMESTAMP,DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 5 MINUTE))`,
       [requestId, user.id, deviceLabel || "جهاز جديد", deviceId]);
       await connection.commit();
       return NextResponse.json({ status: false, message: "يرجى انتظار موافقة صاحب الحساب.", data: { request_id: requestId, state: "pending", check_after_seconds: 3, expires_in_seconds: 300 } }, { status: 202 });
@@ -100,15 +100,15 @@ export async function POST(request: Request) {
       await connection.execute("DELETE FROM personal_access_tokens WHERE tokenable_id=? AND tokenable_type='App\\Models\\Citizen' AND name='mobile-app'", [user.id]);
     }
     const created = await connection.execute<{ id: number } & RowDataPacket>(`INSERT INTO personal_access_tokens(tokenable_type,tokenable_id,name,token,abilities,created_at,updated_at)
-      VALUES('App\\Models\\Citizen',?,?,?,'["*"]',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP) RETURNING id`, [user.id, tokenName, tokenHash]);
+      VALUES('App\\Models\\Citizen',?,?,?,'["*"]',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)`, [user.id, tokenName, tokenHash]);
     if (deviceId) {
       await connection.execute(`INSERT INTO citizen_devices(citizen_id,device_id,device_label,status,first_seen_at,last_seen_at,created_at,updated_at)
         VALUES(?,?,?,'active',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)
-        ON CONFLICT(citizen_id,device_id) DO UPDATE SET device_label=EXCLUDED.device_label,status='active',
+        ON DUPLICATE KEY UPDATE device_label=VALUES(device_label),status='active',
           last_seen_at=CURRENT_TIMESTAMP,blocked_at=NULL,updated_at=CURRENT_TIMESTAMP`,
       [user.id, deviceId, deviceLabel || "هاتف محمول"]);
     }
-    const token = `${created.rows[0].id}|${secret}`;
+    const token = `${created.insertId}|${secret}`;
     await connection.commit();
     return NextResponse.json({ status: true, message: "Login successful", data: { user: publicUser(user), token, token_type: "Bearer" } });
   } catch (error) {
