@@ -1,0 +1,24 @@
+{
+  "name": "tareeqak-system",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "web"
+  ],
+  "scripts": {
+    "dev": "npm --workspace tareeqak-admin-web run dev",
+    "build": "npm --workspace tareeqak-admin-web run build",
+    "start": "npm --workspace tareeqak-admin-web run start",
+    "lint": "npm --workspace tareeqak-admin-web run lint",
+    "admin:create": "npm --workspace tareeqak-admin-web run admin:create"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.3"
+  },
+  "overrides": {
+    "postcss": "^8.5.32"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.23.1"
+  }
+}
