@@ -7,6 +7,7 @@ import NavigationFeedback from "@/components/NavigationFeedback";
 import DemoDataCleanup from "@/components/DemoDataCleanup";
 import ThemeBootstrap from "@/components/ThemeBootstrap";
 import AdminSessionGuard from "@/components/AdminSessionGuard";
+import ServiceAvailabilityGuard from "@/components/ServiceAvailabilityGuard";
 import { LiveRefreshProvider } from "@/lib/live-refresh";
 import { Toaster } from "sonner";
 export const metadata: Metadata = {
@@ -26,7 +27,9 @@ export default function RootLayout({
         <LiveRefreshProvider />
         <AdminSessionGuard />
         <DemoDataCleanup />
-        <NavigationFeedback>{children}</NavigationFeedback>
+        <ServiceAvailabilityGuard>
+          <NavigationFeedback>{children}</NavigationFeedback>
+        </ServiceAvailabilityGuard>
       </body>
     </html>
   );
